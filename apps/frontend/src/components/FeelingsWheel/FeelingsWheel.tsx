@@ -141,7 +141,8 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
 
   // ── Tooltip state ─────────────────────────────────────────────────────────
   // tooltipEmotion: the emotion currently hovered (null = hidden)
-  // tooltipPos: pixel position of tooltip relative to the wrapper div
+  // tooltipPos: viewport-relative position (clientX/Y) so the tooltip tracks
+  // correctly when the page is scrolled and the wheel overflows the viewport.
   const [tooltipEmotion, setTooltipEmotion] = useState<Emotion | null>(null)
   const [tooltipPos,     setTooltipPos]     = useState({ x: 0, y: 0 })
 
@@ -344,12 +345,10 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
     setTooltipEmotion(null)
   }
 
-  // handleSvgMouseMove: tracks mouse position relative to the wrapper div so
-  // the tooltip can follow the cursor without needing to know SVG coordinates.
+  // handleSvgMouseMove: tracks viewport-relative cursor position so the tooltip
+  // stays pinned to the cursor even when the page is scrolled.
   function handleSvgMouseMove(e: React.MouseEvent<SVGSVGElement>) {
-    if (!wrapRef.current) return
-    const rect = wrapRef.current.getBoundingClientRect()
-    setTooltipPos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+    setTooltipPos({ x: e.clientX, y: e.clientY })
   }
 
   // ── Build arc label paths for <defs> (core ring only) ───────────────────
@@ -432,12 +431,12 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
       {tooltipEmotion && !pendingEmotion && (
         <div
           style={{
-            position: 'absolute',
+            position: 'fixed',
             left: tooltipPos.x + 14,
             top: tooltipPos.y - 10,
             transform: 'translateY(-50%)',
             pointerEvents: 'none',
-            zIndex: 20,
+            zIndex: 9999,
             background: 'rgba(255,255,255,0.97)',
             border: '1px solid #e5e7eb',
             borderRadius: 10,
@@ -472,10 +471,9 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
       <svg
         ref={svgRef}
         viewBox="0 0 800 800"
-        style={{
-          width: '100%', display: 'block', margin: '0 auto',
-          fontFamily: "'Caveat', cursive",
-        }}
+        width={900}
+        height={900}
+        style={{ display: 'block', fontFamily: "'Caveat', cursive" }}
         aria-label="Feelings Wheel"
         role="img"
         onMouseMove={handleSvgMouseMove}

@@ -135,7 +135,7 @@ export default function App() {
       {step === 'setup' && <SessionSetup onStart={handleStart} />}
 
       {step === 'wheel' && (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', overflowX: 'auto' }}>
           <Header />
 
           {mode === 'incident' && (
@@ -166,16 +166,28 @@ export default function App() {
                   : `${selections.length} feeling${selections.length > 1 ? 's' : ''} selected · tap more or press Done`}
               </p>
 
-              {/* Wheel */}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 16px 8px' }}>
-                <div style={{ width: '100%', maxWidth: 700 }}>
-                  <FeelingsWheel
-                    emotions={emotions}
-                    level={level}
-                    onEmotionSelect={handleEmotionSelect}
-                    onEmotionHover={setHoveredEmotion}
-                  />
-                </div>
+              {/* Wheel — fixed 900px so all labels render crisply.
+                  The page scrolls natively in both axes; JS centres the wheel
+                  on mount so the core ring is the first thing the user sees. */}
+              <div
+                style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 8px' }}
+                ref={(el) => {
+                  if (el) {
+                    // On first render, scroll the wheel's centre into the middle
+                    // of the viewport. The wheel is 900px; centre = 450px from left.
+                    // We want that point at viewport centre horizontally.
+                    const vw = window.innerWidth
+                    const leftOffset = Math.max(0, (900 - vw) / 2)
+                    window.scrollTo({ left: leftOffset, top: 0, behavior: 'instant' })
+                  }
+                }}
+              >
+                <FeelingsWheel
+                  emotions={emotions}
+                  level={level}
+                  onEmotionSelect={handleEmotionSelect}
+                  onEmotionHover={setHoveredEmotion}
+                />
               </div>
 
               {/* ── Selected emotions list + Done button ─────────────────────────── */}
