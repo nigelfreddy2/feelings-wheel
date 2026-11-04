@@ -1,0 +1,61 @@
+# Docker Compose — local development stack
+# Starts MySQL 8, the Express backend, and serves the Vite frontend
+# Run: docker compose up --build
+
+services:
+  db:
+    image: mysql:8.4
+    container_name: feelings-wheel-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: feelings_wheel
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile.dev
+    container_name: feelings-wheel-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "mysql://appuser:apppassword@db:3306/feelings_wheel"
+      PORT: "3001"
+      NODE_ENV: "development"
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./apps/backend:/app
+      - /app/node_modules
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile.dev
+    container_name: feelings-wheel-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: "http://localhost:3001"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  db_data:

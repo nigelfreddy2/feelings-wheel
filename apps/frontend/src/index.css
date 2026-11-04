@@ -1,0 +1,351 @@
+/* index.css — Wholeness with Willene brand styles
+ * Matches the document style guide seen in Drama Triangle and Ride the Wave handouts.
+ * Background: sketchbook off-white with faint dotted grid.
+ * Typography: Prata (titles) · Open Sans caps (labels) · Montserrat (body) · Caveat (notes).
+ * Palette: salmon #E48E87 · blue-grey #8590A9 · golden #C1B49B · paper #f9f7f4.
+ */
+
+@import "tailwindcss";
+
+/* ── Brand tokens ────────────────────────────────────────────────────────── */
+:root {
+  --salmon:        #E48E87;
+  --salmon-light:  #f6d9d7;
+  --salmon-dark:   #c97068;
+  --blue-grey:     #8590A9;
+  --blue-grey-light: #d4d8e4;
+  --golden:        #C1B49B;
+  --golden-light:  #ede8df;
+  --golden-dark:   #a09076;
+  --paper:         #f9f7f4;       /* sketchbook off-white — main background */
+  --paper-dark:    #f0ece4;       /* slightly deeper for cards */
+  --dot-colour:    #d8d2c8;       /* faint dots in the sketchbook grid */
+  --ink:           #2d2d2d;       /* near-black for titles and strong text */
+  --ink-mid:       #4a4a4a;       /* body text */
+  --ink-light:     #7a7672;       /* secondary / muted text */
+  --border:        #ddd8d0;
+  --white:         #ffffff;
+
+  /* Highlighter fills — slightly translucent, slightly irregular feel */
+  --hl-salmon:     rgba(228, 142, 135, 0.28);
+  --hl-golden:     rgba(193, 180, 155, 0.35);
+  --hl-blue:       rgba(133, 144, 169, 0.22);
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Base — sketchbook paper background with faint dotted grid ───────────── */
+/* The radial-gradient creates evenly-spaced dots at 22px intervals.         */
+html, body {
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.65;
+  color: var(--ink-mid);
+  background-color: var(--paper);
+  background-image: radial-gradient(circle, var(--dot-colour) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Typography scale ────────────────────────────────────────────────────── */
+
+/* Supertitle — Open Sans, tiny ALL CAPS, wide tracking (e.g. "WHEN BIG FEELINGS ARRIVE") */
+.supertitle {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  margin-bottom: 4px;
+}
+
+/* Main page title — Prata, large, ink-dark */
+h1, .title-prata {
+  font-family: 'Prata', Georgia, serif;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.15;
+}
+h1 { font-size: clamp(28px, 5vw, 48px); }
+
+/* Section heading — Prata in salmon */
+h2, .heading-prata {
+  font-family: 'Prata', Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(18px, 2.5vw, 24px);
+  color: var(--salmon);
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+/* Sub-label — Open Sans ALL CAPS, small, wide tracking */
+.label-caps {
+  font-family: 'Open Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+}
+
+/* Body text */
+p, .body-text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink-mid);
+  line-height: 1.7;
+}
+
+/* Italic emphasis */
+em { font-style: italic; }
+
+/* Margin note — Caveat handwriting, small */
+.note-caveat {
+  font-family: 'Caveat', cursive;
+  font-size: 13px;
+  color: var(--ink-light);
+  font-style: italic;
+}
+
+/* ── Highlighter spans — soft coloured rectangle behind key words ────────── */
+/* Slightly taller than cap-height to look like a felt-tip highlighter.      */
+.hl-salmon {
+  background: var(--hl-salmon);
+  padding: 1px 4px;
+  border-radius: 3px;
+  display: inline;
+}
+.hl-golden {
+  background: var(--hl-golden);
+  padding: 1px 4px;
+  border-radius: 3px;
+  display: inline;
+}
+.hl-blue {
+  background: var(--hl-blue);
+  padding: 1px 4px;
+  border-radius: 3px;
+  display: inline;
+}
+
+/* ── Dotted section divider — matches the handout dashed lines ───────────── */
+.divider-dotted {
+  border: none;
+  border-top: 1.5px dashed var(--dot-colour);
+  margin: 24px 0;
+}
+
+/* ── Bullet list with en-dash in salmon ──────────────────────────────────── */
+.dash-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+}
+.dash-list li {
+  position: relative;
+  padding-left: 18px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  color: var(--ink-mid);
+  margin-bottom: 6px;
+  line-height: 1.55;
+}
+.dash-list li::before {
+  content: '–';
+  position: absolute;
+  left: 0;
+  color: var(--salmon);
+  font-weight: 600;
+}
+
+/* ── Card — white surface with subtle shadow ─────────────────────────────── */
+.card {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  box-shadow: 0 2px 16px rgba(45, 45, 45, 0.07);
+}
+
+/* ── Step page wrapper ───────────────────────────────────────────────────── */
+.step-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 20px 48px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn-primary {
+  display: inline-block;
+  background: var(--salmon);
+  color: var(--white);
+  border: none;
+  border-radius: 50px;
+  padding: 12px 28px;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+.btn-primary:hover  { background: var(--salmon-dark); }
+.btn-primary:active { transform: scale(0.97); }
+
+.btn-ghost {
+  background: none;
+  border: 1.5px solid var(--golden);
+  color: var(--golden-dark);
+  border-radius: 50px;
+  padding: 10px 22px;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-ghost:hover { background: var(--golden-light); }
+
+/* ── Tab bar ─────────────────────────────────────────────────────────────── */
+.tab-bar { display: flex; gap: 6px; margin-bottom: 16px; }
+.tab-btn {
+  padding: 6px 16px;
+  border-radius: 50px;
+  border: none;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  background: var(--golden-light);
+  color: var(--golden-dark);
+}
+.tab-btn.active {
+  background: var(--salmon);
+  color: var(--white);
+}
+
+/* ── Range slider ────────────────────────────────────────────────────────── */
+input[type=range] {
+  width: 100%;
+  cursor: pointer;
+  accent-color: var(--salmon);
+}
+
+/* ── Definition drawer — slides up from bottom ───────────────────────────── */
+.def-drawer {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--white);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 32px rgba(45,45,45,0.13);
+  padding: 20px 24px 36px;
+  max-height: 50vh;
+  overflow-y: auto;
+  animation: drawerUp 0.28s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+  z-index: 100;
+}
+@keyframes drawerUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.drawer-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 18px;
+}
+
+/* ── Wheel segment states ────────────────────────────────────────────────── */
+.wheel-segment {
+  cursor: pointer;
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+.wheel-segment:hover    { filter: brightness(1.1) saturate(1.08); }
+.wheel-segment.faded    { opacity: 0.15; pointer-events: none; }
+.wheel-segment.selected { filter: brightness(1.15) drop-shadow(0 0 6px rgba(45,45,45,0.18)); }
+
+/* ── Ring expand animation ───────────────────────────────────────────────── */
+/* transform-origin matches the 800×800 viewBox centre at 400,400           */
+.ring-enter {
+  animation: ringIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-origin: 400px 400px;
+}
+@keyframes ringIn {
+  from { opacity: 0; transform: scale(0.82); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Incident banner ─────────────────────────────────────────────────────── */
+.incident-banner {
+  background: var(--salmon-light);
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  color: var(--ink);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+/* ── Session setup screen ────────────────────────────────────────────────── */
+.setup-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+}
+.setup-option-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 480px;
+  margin: 16px 0;
+}
+.setup-option {
+  background: var(--white);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: left;
+}
+.setup-option.selected,
+.setup-option:hover {
+  border-color: var(--salmon);
+  background: #fdf8f7;
+}
+.setup-option-title {
+  font-family: 'Prata', serif;
+  font-size: 15px;
+  color: var(--salmon);
+  margin-bottom: 4px;
+}
+.setup-option-desc {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  color: var(--ink-light);
+  line-height: 1.5;
+}

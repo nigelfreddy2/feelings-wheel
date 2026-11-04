@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files — never commit secrets
+.env
+.env.local
+.env.*.local
+apps/backend/.env
+
+# Database
+*.db
+*.sqlite
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+
+# Bob internal tooling
+.bob/
+
+# Prisma generated client (re-generated on install)
+apps/backend/node_modules/
+apps/frontend/node_modules/
+
+# Test coverage
+coverage/

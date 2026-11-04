@@ -1,0 +1,27 @@
+FONTS
+
+Titles:
+familiy: Prata
+size: 60px
+weight: 500
+
+Subtitles:
+family: Open Sans
+size: 14px
+weight: 700
+uppercase
+
+Body:
+family: Montserrat
+size: 15-16px
+weight: 500/regular
+color: #666666
+
+COLOURS
+
+Salmon: #E48E87
+Blue/grey: #8590A9
+Golden: #C1B49B
+Light golden: #f5f1ea
+Light pink: #FEF2F5
+Super light pink: #F6D9E2

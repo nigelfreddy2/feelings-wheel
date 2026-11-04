@@ -1,0 +1,263 @@
+// schema.prisma — full data model for the Feelings Wheel app
+// All sessions are anonymous — no PII stored at any point.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Emotion catalogue — populated from seed data (wheel PDFs + DBT Handout 6)
+// ---------------------------------------------------------------------------
+
+model Emotion {
+  key          String   @id @db.VarChar(100)
+  label        String   @db.VarChar(100)
+  definition   String   @db.Text
+  parentKey    String?  @db.VarChar(100)  @map("parent_key")
+  ring         Ring
+  sectorColour String   @db.VarChar(7)    @map("sector_colour")
+  levelMin     Level    @map("level_min")
+  source       String   @db.VarChar(100)
+
+  // Relations
+  parent       Emotion?  @relation("EmotionTree", fields: [parentKey], references: [key])
+  children     Emotion[] @relation("EmotionTree")
+
+  dimensions        EmotionDimension[]
+  copingSuggestions CopingSuggestion[]
+  sessionEmotions   SessionEmotion[]
+  sessionReflections SessionReflection[]
+  embeddings        EmotionEmbedding[]
+  aiInsights        AiInsight[]
+
+  @@map("emotions")
+}
+
+// One row per bullet point of a DBT dimension (prompting event, biological change, etc.)
+model EmotionDimension {
+  id           String    @id @default(uuid()) @db.VarChar(36)
+  emotionKey   String    @db.VarChar(100)   @map("emotion_key")
+  dimension    Dimension
+  content      String    @db.Text
+  levelMin     Level     @map("level_min")
+  source       String    @db.VarChar(100)
+  displayOrder Int       @default(0)        @map("display_order") @db.SmallInt
+
+  emotion Emotion @relation(fields: [emotionKey], references: [key])
+
+  @@map("emotion_dimensions")
+}
+
+// Coping suggestions — per-emotion or universal (emotionKey NULL)
+model CopingSuggestion {
+  id          String           @id @default(uuid()) @db.VarChar(36)
+  emotionKey  String?          @db.VarChar(100)  @map("emotion_key")
+  suggestion  String           @db.Text
+  category    CopingCategory
+  levelMin    Level            @map("level_min")
+  source      String           @db.VarChar(100)
+
+  emotion Emotion? @relation(fields: [emotionKey], references: [key])
+
+  @@map("coping_suggestions")
+}
+
+// 21 myths about emotions from DBT Handout 4a
+model EmotionMyth {
+  id           String  @id @default(uuid()) @db.VarChar(36)
+  mythText     String  @db.Text            @map("myth_text")
+  challenge    String? @db.Text
+  displayOrder Int     @default(0)         @map("display_order") @db.SmallInt
+  source       String  @default("dbt-handout-4a") @db.VarChar(100)
+
+  @@map("emotion_myths")
+}
+
+// ---------------------------------------------------------------------------
+// Sessions — anonymous; no PII
+// ---------------------------------------------------------------------------
+
+model Session {
+  id               String      @id @default(uuid()) @db.VarChar(36)
+  createdAt        DateTime    @default(now())       @map("created_at")
+  level            Level
+  mode             SessionMode
+  overridingEmotion String?    @db.VarChar(100)      @map("overriding_emotion")
+  completed        Boolean     @default(false)
+  feedbackRating   Int?        @map("feedback_rating") @db.TinyInt
+  feedbackText     String?     @db.Text              @map("feedback_text")
+
+  emotions    SessionEmotion[]
+  events      SessionEvent[]
+  reflections SessionReflection[]
+  feedback    Feedback[]
+  aiInsights  AiInsight[]
+
+  @@map("sessions")
+}
+
+// Which emotion was selected, at which ring
+model SessionEmotion {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  sessionId  String   @db.VarChar(36)      @map("session_id")
+  ring       Ring
+  emotionKey String   @db.VarChar(100)     @map("emotion_key")
+  selectedAt DateTime @default(now())      @map("selected_at")
+  dwellMs    Int?     @map("dwell_ms")
+  intensity  Int?     @db.TinyInt          // 1-10 intensity slider
+
+  session Session @relation(fields: [sessionId], references: [id])
+  emotion Emotion @relation(fields: [emotionKey], references: [key])
+
+  @@map("session_emotions")
+}
+
+// Full behavioural event log — raw material for AI analytics
+// event_data is JSON so the schema never needs altering as the app evolves
+model SessionEvent {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  sessionId  String   @db.VarChar(36)      @map("session_id")
+  eventType  String   @db.VarChar(100)     @map("event_type")
+  // e.g. wheel_start | ring_expanded | emotion_hovered | emotion_selected
+  //      definition_viewed | intensity_set | check_facts_started
+  //      coping_viewed | coaching_started | session_abandoned | session_complete
+  eventData  Json?    @map("event_data")
+  occurredAt DateTime @default(now())      @map("occurred_at")
+
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@map("session_events")
+}
+
+// Check the Facts + coaching flow responses
+model SessionReflection {
+  id               String            @id @default(uuid()) @db.VarChar(36)
+  sessionId        String            @db.VarChar(36)       @map("session_id")
+  emotionKey       String            @db.VarChar(100)      @map("emotion_key")
+  emotionFitsFacts EmotionFitsFacts? @map("emotion_fits_facts")
+  actionUrge       String?           @db.Text              @map("action_urge")
+  oppositeTaken    Boolean?          @map("opposite_taken")
+  reframeText      String?           @db.Text              @map("reframe_text")
+  commitmentText   String?           @db.Text              @map("commitment_text")
+  intensityBefore  Int?              @db.TinyInt           @map("intensity_before")
+  intensityAfter   Int?              @db.TinyInt           @map("intensity_after")
+  createdAt        DateTime          @default(now())       @map("created_at")
+
+  session Session @relation(fields: [sessionId], references: [id])
+  emotion Emotion @relation(fields: [emotionKey], references: [key])
+
+  @@map("session_reflections")
+}
+
+// Standalone or session-linked feedback
+model Feedback {
+  id          String    @id @default(uuid()) @db.VarChar(36)
+  sessionId   String?   @db.VarChar(36)  @map("session_id")
+  submittedAt DateTime  @default(now())  @map("submitted_at")
+  rating      Int?      @db.TinyInt
+  comment     String?   @db.Text
+  pageContext String?   @db.VarChar(100) @map("page_context")
+
+  session Session? @relation(fields: [sessionId], references: [id])
+
+  @@map("feedback")
+}
+
+// ---------------------------------------------------------------------------
+// AI — Phase 5 tables (created now so FK relationships are stable from day 1)
+// ---------------------------------------------------------------------------
+
+// AI-generated insights — empty until Phase 5
+model AiInsight {
+  id            String       @id @default(uuid()) @db.VarChar(36)
+  generatedAt   DateTime     @default(now())      @map("generated_at")
+  scope         InsightScope
+  sessionId     String?      @db.VarChar(36)      @map("session_id")
+  emotionKey    String?      @db.VarChar(100)     @map("emotion_key")
+  insightType   String       @db.VarChar(100)     @map("insight_type")
+  insightText   String       @db.Text             @map("insight_text")
+  modelId       String?      @db.VarChar(100)     @map("model_id")
+  confidence    Decimal?     @db.Decimal(4, 3)
+  rawOutput     Json?        @map("raw_output")
+
+  session Session? @relation(fields: [sessionId], references: [id])
+  emotion Emotion? @relation(fields: [emotionKey], references: [key])
+
+  @@map("ai_insights")
+}
+
+// Vector embeddings of emotion definitions — Phase 5 semantic search
+model EmotionEmbedding {
+  emotionKey String  @db.VarChar(100) @map("emotion_key")
+  modelId    String  @db.VarChar(100) @map("model_id")
+  embedding  Json    // stored as JSON array until MySQL VECTOR type is available
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  emotion Emotion @relation(fields: [emotionKey], references: [key])
+
+  @@id([emotionKey, modelId])
+  @@map("emotion_embeddings")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Ring {
+  core
+  mid
+  specific
+}
+
+enum Level {
+  child
+  adult
+  advanced
+}
+
+enum SessionMode {
+  general
+  incident
+}
+
+enum Dimension {
+  synonyms
+  prompting_event
+  interpretation
+  biological_change
+  expression_action
+  aftereffect
+  opposite_action
+  justified_when
+  coping_strategy
+  child_language
+  what_it_does
+}
+
+enum CopingCategory {
+  breathing
+  grounding
+  opposite_action
+  pleasant_event
+  please_skill
+  mindfulness
+  crisis
+  values_reflection
+}
+
+enum EmotionFitsFacts {
+  yes
+  no
+  unsure
+}
+
+enum InsightScope {
+  global
+  session
+  cohort
+}

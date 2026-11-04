@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Feelings Wheel — Merged Emotion Hierarchy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;font-size:13px;line-height:1.5;color:#1f2328;background:#fff;padding:32px 24px 48px;max-width:980px;margin:0 auto}
+h1{font-size:22px;font-weight:700;margin-bottom:4px}
+.sub{font-size:12px;color:#57606a;margin-bottom:20px}
+.stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.stat{background:#f7f8fa;border:1px solid #e5e7eb;border-radius:8px;padding:8px 14px;font-size:12px;color:#57606a}
+.stat strong{display:block;font-size:20px;color:#1f2328;font-weight:700}
+.note{background:#fffbec;border:1px solid #e5d879;border-radius:8px;padding:10px 14px;font-size:12px;color:#665c00;margin-bottom:24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.card{border-radius:10px;border:2px solid;overflow:hidden}
+.ch{padding:10px 14px 8px;display:flex;align-items:flex-start;gap:9px}
+.pip{width:13px;height:13px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.cn{font-size:14px;font-weight:700}
+.cd{font-size:11px;color:rgba(0,0,0,0.5);line-height:1.35;margin-top:1px}
+.new-badge{font-size:9px;background:#3b82d4;color:#fff;border-radius:20px;padding:1px 6px;font-weight:700;vertical-align:middle;margin-left:5px;letter-spacing:.04em}
+.mids{padding:4px 14px 12px;display:flex;flex-direction:column;gap:5px}
+.mn{font-size:11px;font-weight:700;color:#1f2328;margin-bottom:2px}
+.specs{display:flex;flex-wrap:wrap;gap:3px}
+.spill{font-size:10px;background:rgba(0,0,0,0.07);border-radius:20px;padding:1px 7px;color:#1f2328}
+.spill.empty{background:rgba(0,0,0,0.03);color:#bbb;font-style:italic}
+.leg{margin-top:28px;padding-top:18px;border-top:1px solid #e5e7eb;font-size:11px;color:#57606a}
+.leg h3{font-size:12px;font-weight:700;color:#1f2328;margin-bottom:10px}
+.lgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.li{display:flex;align-items:flex-start;gap:6px}
+.lpip{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.decisions{margin-top:28px;padding-top:18px;border-top:1px solid #e5e7eb}
+.decisions h3{font-size:12px;font-weight:700;color:#1f2328;margin-bottom:10px}
+.decisions p{font-size:11px;color:#57606a;margin-bottom:8px;line-height:1.5}
+.decisions strong{color:#1f2328}
+footer{margin-top:36px;padding-top:12px;border-top:1px solid #e5e7eb;text-align:center;font-size:11px;color:#9aa0a6}
+@media print{body{padding:16px}footer{display:none}}
+@page{margin:0}
+</style>
+</head>
+<body>
+
+<h1>Feelings Wheel — Merged Emotion Hierarchy</h1>
+<p class="sub">Sources: Willene Freddy "Name It To Tame It" wheel &nbsp;·&nbsp; DBT Handout 6 "Ways to Describe Emotions" (Linehan, 2015) &nbsp;·&nbsp; SocialWorkersToolbox wheel &nbsp;·&nbsp; Seeded 2026-11-04</p>
+
+<div class="stats">
+  <div class="stat"><strong>10</strong>Core emotions</div>
+  <div class="stat"><strong>52</strong>Mid-ring emotions</div>
+  <div class="stat"><strong>92</strong>Outer-ring specifics</div>
+  <div class="stat"><strong>154</strong>Total entries</div>
+  <div class="stat"><strong>3</strong>Levels: Child / Adult / Advanced</div>
+</div>
+
+<div class="note">
+  <strong>NEW in 2026-11-04 seed pass:</strong> Love, Guilt, and Shame now each have 4 mid children and 8 specific grandchildren, sourced from DBT Handout 6 word clusters and the Willene Freddy wheel. Previously all three were childless stubs with no sub-emotions.
+</div>
+
+<div class="grid">
+
+<div class="card" style="border-color:#F5C842">
+  <div class="ch" style="background:#F5C84215"><div class="pip" style="background:#F5C842"></div>
+    <div><div class="cn">Happy</div><div class="cd">A positive state of wellbeing and contentment, from mild pleasure to intense joy.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Playful</div><div class="specs"><span class="spill">Aroused</span><span class="spill">Cheeky</span><span class="spill">Free</span><span class="spill">Joyful</span></div></div>
+    <div><div class="mn">Content</div><div class="specs"><span class="spill">Curious</span><span class="spill">Inquisitive</span><span class="spill">Successful</span><span class="spill">Confident</span></div></div>
+    <div><div class="mn">Interested</div><div class="specs"><span class="spill">Respected</span><span class="spill">Valued</span></div></div>
+    <div><div class="mn">Proud</div><div class="specs"><span class="spill empty">no specifics yet</span></div></div>
+    <div><div class="mn">Accepted</div><div class="specs"><span class="spill empty">no specifics yet</span></div></div>
+    <div><div class="mn">Powerful</div><div class="specs"><span class="spill">Courageous</span><span class="spill">Creative</span></div></div>
+    <div><div class="mn">Peaceful</div><div class="specs"><span class="spill">Loving</span><span class="spill">Thankful</span><span class="spill">Sensitive</span><span class="spill">Intimate</span></div></div>
+    <div><div class="mn">Trusting</div><div class="specs"><span class="spill">Hopeful</span><span class="spill">Inspired</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#6BAED6">
+  <div class="ch" style="background:#6BAED615"><div class="pip" style="background:#6BAED6"></div>
+    <div><div class="cn">Sad</div><div class="cd">Sorrow, unhappiness, or grief from loss, disappointment, or unmet needs.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Lonely</div><div class="specs"><span class="spill">Isolated</span><span class="spill">Abandoned</span></div></div>
+    <div><div class="mn">Vulnerable</div><div class="specs"><span class="spill">Victimised</span><span class="spill">Fragile</span></div></div>
+    <div><div class="mn">Despair</div><div class="specs"><span class="spill">Grief</span><span class="spill">Powerless</span></div></div>
+    <div><div class="mn">Guilty</div><div class="specs"><span class="spill empty">no specifics yet</span></div></div>
+    <div><div class="mn">Depressed</div><div class="specs"><span class="spill">Ashamed</span><span class="spill">Remorseful</span></div></div>
+    <div><div class="mn">Hurt</div><div class="specs"><span class="spill">Disappointed</span><span class="spill">Empty</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#E05C5C">
+  <div class="ch" style="background:#E05C5C15"><div class="pip" style="background:#E05C5C"></div>
+    <div><div class="cn">Angry</div><div class="cd">Strong displeasure when something important is blocked or threatened.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Let Down</div><div class="specs"><span class="spill">Betrayed</span><span class="spill">Resentful</span></div></div>
+    <div><div class="mn">Humiliated</div><div class="specs"><span class="spill">Disrespected</span><span class="spill">Ridiculed</span></div></div>
+    <div><div class="mn">Bitter</div><div class="specs"><span class="spill">Indignant</span><span class="spill">Violated</span></div></div>
+    <div><div class="mn">Mad</div><div class="specs"><span class="spill">Furious</span><span class="spill">Jealous</span></div></div>
+    <div><div class="mn">Aggressive</div><div class="specs"><span class="spill">Provoked</span><span class="spill">Hostile</span></div></div>
+    <div><div class="mn">Frustrated</div><div class="specs"><span class="spill">Infuriated</span><span class="spill">Annoyed</span></div></div>
+    <div><div class="mn">Distant</div><div class="specs"><span class="spill">Withdrawn</span><span class="spill">Numb</span></div></div>
+    <div><div class="mn">Critical</div><div class="specs"><span class="spill empty">no specifics yet</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#74C476">
+  <div class="ch" style="background:#74C47615"><div class="pip" style="background:#74C476"></div>
+    <div><div class="cn">Disgusted</div><div class="cd">Strong revulsion or disapproval, whether physical or moral in nature.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Disapproving</div><div class="specs"><span class="spill">Judgmental</span><span class="spill">Dismissive</span></div></div>
+    <div><div class="mn">Awful</div><div class="specs"><span class="spill">Embarrassed</span><span class="spill">Appalled</span></div></div>
+    <div><div class="mn">Repelled</div><div class="specs"><span class="spill">Revolted</span><span class="spill">Detestable</span></div></div>
+    <div><div class="mn">Uncomfortable</div><div class="specs"><span class="spill">Hesitant</span><span class="spill">Unsettled</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#9E9AC8">
+  <div class="ch" style="background:#9E9AC815"><div class="pip" style="background:#9E9AC8"></div>
+    <div><div class="cn">Bad</div><div class="cd">A general sense of feeling off, drained, or not right — not yet pinned down to a specific emotion.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Bored</div><div class="specs"><span class="spill">Apathetic</span><span class="spill">Indifferent</span></div></div>
+    <div><div class="mn">Tired</div><div class="specs"><span class="spill">Sleepy</span><span class="spill">Unfocused</span></div></div>
+    <div><div class="mn">Stressed</div><div class="specs"><span class="spill">Overwhelmed</span><span class="spill">Out of Control</span></div></div>
+    <div><div class="mn">Confused</div><div class="specs"><span class="spill">Disillusioned</span><span class="spill">Perplexed</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#FD8D3C">
+  <div class="ch" style="background:#FD8D3C15"><div class="pip" style="background:#FD8D3C"></div>
+    <div><div class="cn">Surprised</div><div class="cd">A brief emotional response to something unexpected; can be positive, negative, or neutral.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Startled</div><div class="specs"><span class="spill">Shocked</span><span class="spill">Dismayed</span></div></div>
+    <div><div class="mn">Amazed</div><div class="specs"><span class="spill">Astonished</span><span class="spill">Awestruck</span></div></div>
+    <div><div class="mn">Excited</div><div class="specs"><span class="spill empty">no specifics yet</span></div></div>
+    <div><div class="mn">Eager</div><div class="specs"><span class="spill empty">no specifics yet</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#FDAE6B">
+  <div class="ch" style="background:#FDAE6B15"><div class="pip" style="background:#FDAE6B"></div>
+    <div><div class="cn">Fearful</div><div class="cd">Anxiety or apprehension about a perceived threat to safety, wellbeing, or self.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Scared</div><div class="specs"><span class="spill">Helpless</span><span class="spill">Frightened</span></div></div>
+    <div><div class="mn">Anxious</div><div class="specs"><span class="spill">Overwhelmed</span><span class="spill">Worried</span></div></div>
+    <div><div class="mn">Insecure</div><div class="specs"><span class="spill">Inadequate</span><span class="spill">Inferior</span></div></div>
+    <div><div class="mn">Weak</div><div class="specs"><span class="spill empty">no specifics yet</span></div></div>
+    <div><div class="mn">Rejected</div><div class="specs"><span class="spill empty">no specifics yet</span></div></div>
+    <div><div class="mn">Threatened</div><div class="specs"><span class="spill empty">no specifics yet</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#F4A7B9">
+  <div class="ch" style="background:#F4A7B920"><div class="pip" style="background:#F4A7B9"></div>
+    <div><div class="cn">Love <span class="new-badge">NEW</span></div><div class="cd">Deep affection, caring, or attraction. DBT Handout 6 source words: adoration, caring, fondness, tenderness, compassion, kindness, passion, warmth, infatuation. Willene wheel: included, accepted, cared for, trusted, close.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Caring</div><div class="specs"><span class="spill">Compassionate</span><span class="spill">Nurturing</span></div></div>
+    <div><div class="mn">Romantic</div><div class="specs"><span class="spill">Passionate</span><span class="spill">Infatuated</span></div></div>
+    <div><div class="mn">Tender</div><div class="specs"><span class="spill">Warm</span><span class="spill">Cherished</span></div></div>
+    <div><div class="mn">Grateful</div><div class="specs"><span class="spill">Appreciative</span><span class="spill">Blessed</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#B5CFD8">
+  <div class="ch" style="background:#B5CFD820"><div class="pip" style="background:#B5CFD8"></div>
+    <div><div class="cn">Guilt <span class="new-badge">NEW</span></div><div class="cd">Responsibility or remorse for a perceived offence. DBT Handout 6 source words: culpability, remorse, apologetic, regret, sorry. Willene wheel: ashamed, embarrassed, regretful, sorry, awkward.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Remorseful</div><div class="specs"><span class="spill">Sorry</span><span class="spill">Contrite</span></div></div>
+    <div><div class="mn">Regretful</div><div class="specs"><span class="spill">Wistful</span><span class="spill">Rueful</span></div></div>
+    <div><div class="mn">Apologetic</div><div class="specs"><span class="spill">Repentant</span><span class="spill">Accountable</span></div></div>
+    <div><div class="mn">Self-Blaming</div><div class="specs"><span class="spill">Culpable</span><span class="spill">Feeling Bad</span></div></div>
+  </div>
+</div>
+
+<div class="card" style="border-color:#C7B99A">
+  <div class="ch" style="background:#C7B99A20"><div class="pip" style="background:#C7B99A"></div>
+    <div><div class="cn">Shame <span class="new-badge">NEW</span></div><div class="cd">Painful humiliation from being judged or believing you are fundamentally flawed. DBT Handout 6 source words: mortification, humiliation, self-conscious, culpability, contrition, discomposure, shyness.</div></div></div>
+  <div class="mids">
+    <div><div class="mn">Humiliated</div><div class="specs"><span class="spill">Mortified</span><span class="spill">Degraded</span></div></div>
+    <div><div class="mn">Embarrassed</div><div class="specs"><span class="spill">Self-Conscious</span><span class="spill">Awkward</span></div></div>
+    <div><div class="mn">Exposed</div><div class="specs"><span class="spill">Transparent</span><span class="spill">Vulnerable</span></div></div>
+    <div><div class="mn">Unworthy</div><div class="specs"><span class="spill">Defective</span><span class="spill">Unlovable</span></div></div>
+  </div>
+</div>
+
+</div>
+
+<div class="leg">
+  <h3>Summary — mid count / specific count per core</h3>
+  <div class="lgrid">
+    <div class="li"><span class="lpip" style="background:#F5C842"></span><span><strong>Happy</strong> — 8 mid, 18 specific</span></div>
+    <div class="li"><span class="lpip" style="background:#6BAED6"></span><span><strong>Sad</strong> — 6 mid, 10 specific</span></div>
+    <div class="li"><span class="lpip" style="background:#E05C5C"></span><span><strong>Angry</strong> — 8 mid, 14 specific</span></div>
+    <div class="li"><span class="lpip" style="background:#74C476"></span><span><strong>Disgusted</strong> — 4 mid, 8 specific</span></div>
+    <div class="li"><span class="lpip" style="background:#9E9AC8"></span><span><strong>Bad</strong> — 4 mid, 8 specific</span></div>
+    <div class="li"><span class="lpip" style="background:#FD8D3C"></span><span><strong>Surprised</strong> — 4 mid, 4 specific</span></div>
+    <div class="li"><span class="lpip" style="background:#FDAE6B"></span><span><strong>Fearful</strong> — 6 mid, 6 specific</span></div>
+    <div class="li"><span class="lpip" style="background:#F4A7B9"></span><span><strong>Love</strong> — 4 mid, 8 specific <span class="new-badge">NEW</span></span></div>
+    <div class="li"><span class="lpip" style="background:#B5CFD8"></span><span><strong>Guilt</strong> — 4 mid, 8 specific <span class="new-badge">NEW</span></span></div>
+    <div class="li"><span class="lpip" style="background:#C7B99A"></span><span><strong>Shame</strong> — 4 mid, 8 specific <span class="new-badge">NEW</span></span></div>
+  </div>
+</div>
+
+<div class="decisions">
+  <h3>Key design decisions</h3>
+  <p><strong>Why 10 cores instead of Willene's 8?</strong> Willene's Basic wheel has: Happy, Calm, Loved, Surprised, Scared, Sad, Angry, Guilty. The app adds Disgusted, Bad, and Fearful (more clinical), and promotes Shame, Guilt, Love to first-class cores following the DBT model. "Calm" is absorbed into Happy via the Peaceful and Trusting mid children.</p>
+  <p><strong>Why are Shame and Guilt separate cores?</strong> DBT Handout 6 gives both equal clinical weight to Anger and Fear, each with their own prompting events, biological changes, and opposite actions. The Willene Basic PDF states explicitly: "Guilt says: I did something wrong. Shame says: Something is wrong with me."</p>
+  <p><strong>DBT Envy and Jealousy?</strong> DBT Handout 6 lists both as primary emotions. Jealous appears as a specific under Mad (Angry). Envy is not currently in the app — it is a candidate for a future seed pass.</p>
+</div>
+
+<footer>Made with IBM Bob</footer>
+</body>
+</html>

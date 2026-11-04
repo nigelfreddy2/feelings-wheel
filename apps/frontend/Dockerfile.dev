@@ -1,0 +1,15 @@
+# Dev Dockerfile for the Vite frontend
+# Used by docker-compose for local hot-reload development
+
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 5173
+
+CMD ["npm", "run", "dev", "--", "--host"]
