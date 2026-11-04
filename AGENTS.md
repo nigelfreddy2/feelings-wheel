@@ -5,7 +5,7 @@ Interactive feelings wheel webapp with drill-down, session analytics, and coachi
 
 ## GitHub
 Personal project — repository owner: nigelfreddy2
-Repo: https://github.com/nigelfreddy2/feelings-wheel (to be created)
+Repo: https://github.com/nigelfreddy2/feelings-wheel
 
 ## Source assets
 - `source/Feelings Wheel Name It To Tame It.pdf` — master copy (Willene Freddy)
@@ -35,4 +35,5 @@ Repo: https://github.com/nigelfreddy2/feelings-wheel (to be created)
 - Status: `PROJECT-STATUS.md`
 
 ## Current phase
-Phase 0 — Planning. Awaiting DBT workbook feelings data before build begins.
+Phase 1 — Active build. Core wheel, backend, seeding, and zoom feature complete.
+210 emotions seeded (11 core · 54 mid · 145 specific).
