@@ -19,7 +19,7 @@
 //     following mouse position. They show the emotion name + truncated definition.
 //   - Level prop controls which rings are shown.
 //   - All arc math lives in wheelMath.ts.
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import rough from 'roughjs'
 import type { Emotion, Level } from '../../types'
 import { describeArc, arcLabelPath, buildWheelLayout } from './wheelMath'
@@ -110,31 +110,6 @@ function spokeLabelFitsArc(
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-
-// ZOOM_FACTOR: how much the viewBox crops when a sector is selected.
-// 2.6 fills the view with the mid + spec rings of the selected sector while
-// keeping the core ring partially visible for context.
-const ZOOM_FACTOR = 2.6
-const ZOOM_VB_SIZE = 800 / ZOOM_FACTOR // ≈ 307px of SVG space shown
-
-// computeZoomViewBox
-// ─────────────────────────────────────────────────────────────────────────────
-// PURPOSE
-//   Returns the SVG viewBox string to zoom into a core sector.
-//   Centres the viewBox on the mid-ring centroid of the sector, shifted
-//   inward from the edge so the core labels remain visible at the top.
-function computeZoomViewBox(startAngle: number, endAngle: number): string {
-  const midAngle = (startAngle + endAngle) / 2
-  // Aim viewBox centre at the outer-mid-ring radius (R=310 from wheel centre)
-  const targetR  = (R_MID_IN + R_MID_OUT) / 2 + 80
-  const tx = CX + targetR * Math.sin(midAngle)
-  const ty = CY - targetR * Math.cos(midAngle)
-  // Blend between wheel centre and sector centroid — keeps the core ring in view
-  const cx = CX + (tx - CX) * 0.55
-  const cy = CY + (ty - CY) * 0.55
-  const half = ZOOM_VB_SIZE / 2
-  return `${(cx - half).toFixed(1)} ${(cy - half).toFixed(1)} ${ZOOM_VB_SIZE.toFixed(1)} ${ZOOM_VB_SIZE.toFixed(1)}`
-}
 
 export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmotionHover }: Props) {
   const svgRef  = useRef<SVGSVGElement>(null)
@@ -320,21 +295,13 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
     onEmotionHover(null)
   }
 
-  // handleCoreClick: first click zooms into the sector; second click on the
-  // same core (i.e. toggle) zooms back out. The intensity overlay is not
-  // opened on the zoom-in click — the user can still select the core emotion
-  // directly from any ring after zooming in.
+  // handleCoreClick: every click opens the intensity overlay so the user can
+  // select and save the feeling at whatever depth they choose.
+  // selectedCoreKey drives the faded-sectors visual effect only.
   function handleCoreClick(emotion: Emotion) {
-    if (selectedCoreKey === emotion.key) {
-      // Second click on same core — zoom out, open intensity
-      setSelectedCoreKey(null)
-      setSelectedMidKey(null)
-      openIntensity(emotion)
-    } else {
-      // First click — zoom in, no intensity overlay yet
-      setSelectedCoreKey(emotion.key)
-      setSelectedMidKey(null)
-    }
+    setSelectedCoreKey((prev) => (prev === emotion.key ? null : emotion.key))
+    setSelectedMidKey(null)
+    openIntensity(emotion)
   }
 
   function handleMidClick(emotion: Emotion) {
@@ -400,60 +367,6 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
     const rotateDeg = bottomHalf ? aDeg + 90 : aDeg - 90
     return `translate(${px.toFixed(2)},${py.toFixed(2)}) rotate(${rotateDeg.toFixed(2)})`
   }
-
-  // ── Zoom viewBox ─────────────────────────────────────────────────────────
-  // Animates the SVG viewBox between the full-wheel view and a cropped sector
-  // view using requestAnimationFrame. CSS transitions cannot interpolate the
-  // viewBox string attribute, so we track the four numbers as state and lerp
-  // them each frame over ZOOM_DURATION ms.
-  const ZOOM_DURATION = 200 // ms
-
-  const TARGET_VB_FULL   = useMemo(() => [0, 0, 800, 800] as [number,number,number,number], [])
-  const targetVbForSector = useCallback((coreKey: string | null): [number,number,number,number] => {
-    if (!coreKey) return TARGET_VB_FULL
-    const sector = sectors.find((s) => s.coreKey === coreKey)
-    if (!sector) return TARGET_VB_FULL
-    const vbStr = computeZoomViewBox(sector.startAngle, sector.endAngle)
-    const [x, y, w, h] = vbStr.split(' ').map(Number)
-    return [x, y, w, h]
-  }, [sectors, TARGET_VB_FULL])
-
-  const [vb, setVb] = useState<[number,number,number,number]>([0, 0, 800, 800])
-  const animRef      = useRef<number | null>(null)
-  const vbRef        = useRef<[number,number,number,number]>([0, 0, 800, 800])
-
-  useEffect(() => {
-    const target = targetVbForSector(selectedCoreKey)
-    const start  = vbRef.current
-    const t0     = performance.now()
-    if (animRef.current !== null) cancelAnimationFrame(animRef.current)
-
-    function lerp(a: number, b: number, t: number) { return a + (b - a) * t }
-    function easeInOut(t: number) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t }
-
-    function frame(now: number) {
-      const elapsed = now - t0
-      const rawT    = Math.min(elapsed / ZOOM_DURATION, 1)
-      const t       = easeInOut(rawT)
-      const next: [number,number,number,number] = [
-        lerp(start[0], target[0], t),
-        lerp(start[1], target[1], t),
-        lerp(start[2], target[2], t),
-        lerp(start[3], target[3], t),
-      ]
-      vbRef.current = next
-      setVb(next)
-      if (rawT < 1) animRef.current = requestAnimationFrame(frame)
-    }
-    animRef.current = requestAnimationFrame(frame)
-    return () => { if (animRef.current !== null) cancelAnimationFrame(animRef.current) }
-  }, [selectedCoreKey, targetVbForSector])
-
-  const currentViewBox = `${vb[0].toFixed(1)} ${vb[1].toFixed(1)} ${vb[2].toFixed(1)} ${vb[3].toFixed(1)}`
-
-  const zoomedCore = selectedCoreKey
-    ? coreEmotions.find((e) => e.key === selectedCoreKey) ?? null
-    : null
 
   // ────────────────────────────────────────────────────────────────────────
   return (
@@ -536,28 +449,9 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
         </div>
       )}
 
-      {/* Zoom-out button — visible when a sector is selected */}
-      {selectedCoreKey && !pendingEmotion && (
-        <button
-          onClick={() => { setSelectedCoreKey(null); setSelectedMidKey(null) }}
-          style={{
-            position: 'absolute', top: 10, left: 10, zIndex: 15,
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '6px 12px', background: '#fff',
-            border: `2px solid ${zoomedCore?.sectorColour ?? '#e5e7eb'}`,
-            borderRadius: 20, cursor: 'pointer', fontSize: 13,
-            fontFamily: "'Caveat', cursive", fontWeight: 600,
-            color: '#1f2328', boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-          }}
-          aria-label="Zoom out to full wheel"
-        >
-          ← All emotions
-        </button>
-      )}
-
       <svg
         ref={svgRef}
-        viewBox={currentViewBox}
+        viewBox="0 0 800 800"
         style={{
           width: '100%', display: 'block', margin: '0 auto',
           fontFamily: "'Caveat', cursive",
