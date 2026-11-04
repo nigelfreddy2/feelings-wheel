@@ -15,6 +15,9 @@ import SessionComplete from './components/SessionComplete/SessionComplete'
 
 type Step = 'setup' | 'wheel' | 'facts' | 'coping' | 'feedback' | 'complete'
 
+// Selection entry — one emotion + intensity picked during this session
+interface Selection { emotion: Emotion; intensity: number }
+
 export default function App() {
   const [step,            setStep]            = useState<Step>('setup')
   const [level,           setLevel]           = useState<Level>('adult')
@@ -24,6 +27,9 @@ export default function App() {
   const [error,           setError]           = useState<string | null>(null)
   const [sessionId,       setSessionId]       = useState<string | null>(null)
   const [hoveredEmotion,  setHoveredEmotion]  = useState<Emotion | null>(null)
+  // Multi-select: accumulate all emotions the user clicks during the wheel step
+  const [selections,      setSelections]      = useState<Selection[]>([])
+  // The single emotion that flows into facts/coping — the last one selected
   const [selectedEmotion, setSelectedEmotion] = useState<Emotion | null>(null)
   const [intensity,       setIntensity]       = useState(5)
   const [universalCoping, setUniversalCoping] = useState<CopingSuggestion[]>([])
@@ -48,14 +54,38 @@ export default function App() {
     setStep('wheel')
   }
 
+  // handleEmotionSelect: adds the emotion to the selections list without navigating away.
+  // For child level, one tap immediately proceeds (no list needed).
   async function handleEmotionSelect(emotion: Emotion, intensityValue: number) {
-    setSelectedEmotion(emotion); setIntensity(intensityValue); setHoveredEmotion(null)
+    setHoveredEmotion(null)
+    setSelections((prev) => {
+      // Toggle off if same emotion + same intensity tapped again; otherwise append
+      const exists = prev.findIndex((s) => s.emotion.key === emotion.key)
+      if (exists !== -1) return prev.filter((_, i) => i !== exists)
+      return [...prev, { emotion, intensity: intensityValue }]
+    })
     if (sessionId) {
       const dwellMs = Date.now() - wheelEnteredAt
       await recordEmotionSelection(sessionId, emotion.ring, emotion.key, dwellMs, intensityValue).catch(() => {})
-      await updateSession(sessionId, { overridingEmotion: emotion.key }).catch(() => {})
     }
-    setStep(level === 'child' ? 'coping' : 'facts')
+    // Child mode: one tap → go straight to coping (no accumulation needed)
+    if (level === 'child') {
+      setSelectedEmotion(emotion); setIntensity(intensityValue)
+      setStep('coping')
+    }
+  }
+
+  // handleDone: called when the user presses Done on the wheel.
+  // Uses the last selection as the primary emotion for the reflection flow.
+  async function handleDone() {
+    if (selections.length === 0) return
+    const last = selections[selections.length - 1]
+    setSelectedEmotion(last.emotion)
+    setIntensity(last.intensity)
+    if (sessionId) {
+      await updateSession(sessionId, { overridingEmotion: last.emotion.key }).catch(() => {})
+    }
+    setStep(level === 'adult' ? 'facts' : 'coping')
   }
 
   async function handleReflectionComplete(reflection: SessionReflection) {
@@ -78,7 +108,7 @@ export default function App() {
 
   function handleStartAgain() {
     setStep('setup'); setSelectedEmotion(null); setHoveredEmotion(null)
-    setSessionId(null); setEmotions([]); setIntensity(5)
+    setSessionId(null); setEmotions([]); setIntensity(5); setSelections([])
   }
 
   // ── Shared header ────────────────────────────────────────────────────────────
@@ -127,17 +157,17 @@ export default function App() {
 
           {!loading && !error && (
             <>
-              {/* Instruction hint — Open Sans caps supertitle style */}
+              {/* Instruction hint */}
               <p className="supertitle" style={{ textAlign: 'center', margin: '4px 0 0' }}>
                 {level === 'child'
                   ? 'Tap the feeling that fits best'
-                  : level === 'adult'
-                  ? 'Tap a feeling · tap again to go deeper'
-                  : 'Tap core · mid · specific to explore'}
+                  : selections.length === 0
+                  ? 'Tap feelings that match how you feel right now'
+                  : `${selections.length} feeling${selections.length > 1 ? 's' : ''} selected · tap more or press Done`}
               </p>
 
-              {/* Wheel — fills all available space; inner div caps at 700px so it stays circular */}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 16px 140px' }}>
+              {/* Wheel */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px 16px 8px' }}>
                 <div style={{ width: '100%', maxWidth: 700 }}>
                   <FeelingsWheel
                     emotions={emotions}
@@ -147,6 +177,111 @@ export default function App() {
                   />
                 </div>
               </div>
+
+              {/* ── Selected emotions list + Done button ─────────────────────────── */}
+              {level !== 'child' && selections.length > 0 && (
+                <div style={{
+                  margin: '0 16px 16px',
+                  background: '#fff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: 14,
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
+                }}>
+                  {/* Header row */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '12px 16px 10px',
+                    borderBottom: '1px solid #f0f0f0',
+                  }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: '#57606a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Your feelings
+                    </span>
+                    <button
+                      onClick={handleDone}
+                      style={{
+                        padding: '8px 22px',
+                        background: '#1f2328', color: '#fff',
+                        border: 'none', borderRadius: 20,
+                        fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      Done →
+                    </button>
+                  </div>
+
+                  {/* Scrollable grouped list */}
+                  <div style={{ maxHeight: 220, overflowY: 'auto', padding: '8px 0' }}>
+                    {(() => {
+                      // Group selections by core sector colour + label
+                      const groups = new Map<string, { coreLabel: string; colour: string; items: Selection[] }>()
+                      selections.forEach((sel) => {
+                        // Find the core ancestor: walk up parentKey chain
+                        const allEm = emotions
+                        let current: Emotion | undefined = sel.emotion
+                        let coreEm: Emotion = sel.emotion
+                        while (current) {
+                          if (current.ring === 'core') { coreEm = current; break }
+                          current = allEm.find((e) => e.key === current!.parentKey)
+                          if (current) coreEm = current
+                        }
+                        const key = coreEm.key
+                        if (!groups.has(key)) groups.set(key, { coreLabel: coreEm.label, colour: coreEm.sectorColour, items: [] })
+                        groups.get(key)!.items.push(sel)
+                      })
+
+                      return Array.from(groups.values()).map((group) => (
+                        <div key={group.coreLabel} style={{ marginBottom: 4 }}>
+                          {/* Core heading */}
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 7,
+                            padding: '4px 16px',
+                          }}>
+                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.colour, display: 'inline-block', flexShrink: 0 }} />
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#57606a', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                              {group.coreLabel}
+                            </span>
+                          </div>
+                          {/* Emotion chips */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '2px 16px 6px 32px' }}>
+                            {group.items.map((sel) => (
+                              <button
+                                key={sel.emotion.key}
+                                onClick={() => setSelections((prev) => prev.filter((s) => s.emotion.key !== sel.emotion.key))}
+                                title="Tap to remove"
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                                  padding: '4px 10px 4px 8px',
+                                  background: sel.emotion.sectorColour + '22',
+                                  border: `1.5px solid ${sel.emotion.sectorColour}`,
+                                  borderRadius: 20, cursor: 'pointer',
+                                  fontSize: 13, fontWeight: 500, color: '#1f2328',
+                                  fontFamily: 'inherit',
+                                }}
+                              >
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: sel.emotion.sectorColour, flexShrink: 0 }} />
+                                {sel.emotion.label}
+                                <span style={{
+                                  marginLeft: 2,
+                                  fontSize: 11, fontWeight: 700,
+                                  color: sel.emotion.sectorColour,
+                                  background: '#fff',
+                                  borderRadius: 10, padding: '1px 5px',
+                                  border: `1px solid ${sel.emotion.sectorColour}44`,
+                                }}>
+                                  {sel.intensity}
+                                </span>
+                                <span style={{ fontSize: 10, color: '#aaa', marginLeft: 1 }}>✕</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                </div>
+              )}
             </>
           )}
 

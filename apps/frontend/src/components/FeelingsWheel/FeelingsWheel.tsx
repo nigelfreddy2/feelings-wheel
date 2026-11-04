@@ -109,6 +109,26 @@ function spokeLabelFitsArc(
   return (fontSize * 1.05 <= arcWidth) && (radialNeeded <= ringDepth * 0.92)
 }
 
+// bestLabelForArc
+// ─────────────────────────────────────────────────────────────────────────────
+// PURPOSE
+//   Returns the best label string that fits the arc, or null if nothing fits.
+//   Tries: full label → first word of label → null.
+//   This lets narrow segments show at least the first word rather than nothing.
+function bestLabelForArc(
+  text: string,
+  fontSize: number,
+  arcSpanRad: number,
+  radius: number,
+  gap: number,
+  ringDepth: number
+): string | null {
+  if (spokeLabelFitsArc(text, fontSize, arcSpanRad, radius, gap, ringDepth)) return text
+  const firstWord = text.split(' ')[0]
+  if (firstWord !== text && spokeLabelFitsArc(firstWord, fontSize, arcSpanRad, radius, gap, ringDepth)) return firstWord
+  return null
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 
 export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmotionHover }: Props) {
@@ -555,10 +575,11 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                         without overlapping the adjacent segment. Tooltip always carries
                         the name regardless of whether the label is shown. */}
                     {(() => {
-                      const midMidAng = midStart + midSpan / 2
-                      const midLblR   = R_MID_IN + (R_MID_OUT - R_MID_IN) * 0.55
-                      const midDepth  = R_MID_OUT - R_MID_IN
-                      if (!spokeLabelFitsArc(mid.label, FONT_MID, midSpan, midLblR, GAP_MID, midDepth)) return null
+                      const midMidAng  = midStart + midSpan / 2
+                      const midLblR    = R_MID_IN + (R_MID_OUT - R_MID_IN) * 0.55
+                      const midDepth   = R_MID_OUT - R_MID_IN
+                      const midLblText = bestLabelForArc(mid.label, FONT_MID, midSpan, midLblR, GAP_MID, midDepth)
+                      if (!midLblText) return null
                       return (
                         <text
                           transform={radialLabelTransform(midMidAng, midLblR)}
@@ -569,7 +590,7 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                           dominantBaseline="middle"
                           style={{ pointerEvents: 'none', userSelect: 'none' }}
                         >
-                          {mid.label}
+                          {midLblText}
                         </text>
                       )
                     })()}
@@ -586,7 +607,7 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                         // The arc spans the full midSpan so the label check uses midSpan.
                         const emptyPath = describeArc(CX, CY, R_SPEC_IN, R_SPEC_OUT, midStart, midStart + midSpan, GAP_SPEC)
                         const emptyAng  = midStart + midSpan / 2
-                        const showLbl   = spokeLabelFitsArc(mid.label, FONT_SPEC, midSpan, specLblR, GAP_SPEC, specDepth)
+                        const emptyLbl  = bestLabelForArc(mid.label, FONT_SPEC, midSpan, specLblR, GAP_SPEC, specDepth)
                         return (
                           <g key={`spec-empty-${mid.key}`}>
                             <path
@@ -601,7 +622,7 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                               aria-label={mid.label}
                               tabIndex={0}
                             />
-                            {showLbl && (
+                            {emptyLbl && (
                               <text
                                 transform={radialLabelTransform(emptyAng, specLblR)}
                                 fontSize={FONT_SPEC}
@@ -610,7 +631,7 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                                 dominantBaseline="middle"
                                 style={{ pointerEvents: 'none', userSelect: 'none' }}
                               >
-                                {mid.label}
+                                {emptyLbl}
                               </text>
                             )}
                           </g>
@@ -622,9 +643,8 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                         const specPath   = describeArc(CX, CY, R_SPEC_IN, R_SPEC_OUT, specStart, specEnd, GAP_SPEC)
                         const specMidAng = (specStart + specEnd) / 2
                         const specLblTfm = radialLabelTransform(specMidAng, specLblR)
-                        // Only render the label if the arc has enough tangential width
-                        // to show the text without spilling into the neighbouring segment.
-                        const showLbl    = spokeLabelFitsArc(spec.label, FONT_SPEC, specSpan, specLblR, GAP_SPEC, specDepth)
+                        // Use bestLabelForArc: tries full label, then first word, then null.
+                        const specLblText = bestLabelForArc(spec.label, FONT_SPEC, specSpan, specLblR, GAP_SPEC, specDepth)
 
                         return (
                           <g key={spec.key} className="ring-enter">
@@ -641,8 +661,8 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                               tabIndex={0}
                               onKeyDown={(e) => e.key === 'Enter' && handleSpecClick(spec)}
                             />
-                            {/* Spec label — spoke orientation, suppressed if too narrow */}
-                            {showLbl && (
+                            {/* Spec label — spoke orientation; first word shown if full label too wide */}
+                            {specLblText && (
                               <text
                                 transform={specLblTfm}
                                 fontSize={FONT_SPEC}
@@ -651,7 +671,7 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                                 dominantBaseline="middle"
                                 style={{ pointerEvents: 'none', userSelect: 'none' }}
                               >
-                                {spec.label}
+                                {specLblText}
                               </text>
                             )}
                           </g>
