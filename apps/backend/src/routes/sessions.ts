@@ -91,6 +91,28 @@ router.post('/:id/emotions', async (req, res) => {
   res.status(201).json(sessionEmotion)
 })
 
+// POST /api/sessions/:id/emotions/:emotionId/details — save dimension item selections
+// dimensionItemIds: array of EmotionDimension UUIDs the user ticked
+router.post('/:id/emotions/:emotionId/details', async (req, res) => {
+  const { dimensionItemIds } = req.body
+  const { emotionId } = req.params
+
+  if (!Array.isArray(dimensionItemIds) || dimensionItemIds.length === 0) {
+    res.status(400).json({ error: 'dimensionItemIds must be a non-empty array' })
+    return
+  }
+
+  await prisma.sessionEmotionDetail.createMany({
+    data: dimensionItemIds.map((id: string) => ({
+      sessionEmotionId: emotionId,
+      emotionDimensionId: id,
+    })),
+    skipDuplicates: true,
+  })
+
+  res.status(201).json({ saved: dimensionItemIds.length })
+})
+
 // POST /api/sessions/:id/events — log a UI event (hover, expand, definition view, etc.)
 router.post('/:id/events', async (req, res) => {
   const { eventType, eventData } = req.body

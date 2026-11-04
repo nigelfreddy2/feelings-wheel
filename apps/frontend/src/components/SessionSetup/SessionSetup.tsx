@@ -15,7 +15,7 @@ export default function SessionSetup({ onStart }: Props) {
     <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 24px' }}>
       <h1 style={{ fontSize: 28, fontWeight: 700, margin: '0 0 6px' }}>Feelings Wheel</h1>
       <p style={{ color: '#57606a', margin: '0 0 32px', fontSize: 15 }}>
-        Name it to tame it. Start in the middle and work outward.
+        Start in the middle and work outward.
       </p>
 
       <LevelSelector value={level} onChange={setLevel} />

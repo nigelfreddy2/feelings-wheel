@@ -1,9 +1,9 @@
 // App.tsx — main application component and session state machine
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import type { Emotion, Level, SessionMode, SessionReflection, CopingSuggestion } from './types'
 import {
   fetchEmotions, createSession, updateSession,
-  recordEmotionSelection, logEvent, saveReflection, submitFeedback,
+  recordEmotionSelection, saveEmotionDetails, logEvent, saveReflection, submitFeedback,
 } from './api/client'
 import SessionSetup    from './components/SessionSetup/SessionSetup'
 import FeelingsWheel   from './components/FeelingsWheel/FeelingsWheel'
@@ -13,7 +13,7 @@ import CopingPanel     from './components/CopingPanel/CopingPanel'
 import FeedbackForm    from './components/FeedbackForm/FeedbackForm'
 import SessionComplete from './components/SessionComplete/SessionComplete'
 
-type Step = 'setup' | 'wheel' | 'facts' | 'coping' | 'feedback' | 'complete'
+type Step = 'setup' | 'wheel' | 'summary' | 'facts' | 'coping' | 'feedback' | 'complete'
 
 // Selection entry — one emotion + intensity picked during this session
 interface Selection { emotion: Emotion; intensity: number }
@@ -34,6 +34,11 @@ export default function App() {
   const [intensity,       setIntensity]       = useState(5)
   const [universalCoping, setUniversalCoping] = useState<CopingSuggestion[]>([])
   const [wheelEnteredAt]                      = useState(() => Date.now())
+  // Zoom: wheel render size — only applied to the SVG width/height, not CSS scale
+  const [wheelSize,       setWheelSize]       = useState(2400)
+  const ZOOM_STEP = 200
+  const ZOOM_MIN  = 800
+  const ZOOM_MAX  = 4200
 
   const loadEmotions = useCallback(async (lvl: Level) => {
     setLoading(true); setError(null)
@@ -55,18 +60,36 @@ export default function App() {
   }
 
   // handleEmotionSelect: adds the emotion to the selections list without navigating away.
+  // dimensionItemIds: ticked emotion detail bullet ids. freeText: about/cause/other per-section text.
   // For child level, one tap immediately proceeds (no list needed).
-  async function handleEmotionSelect(emotion: Emotion, intensityValue: number) {
+  async function handleEmotionSelect(
+    emotion: Emotion,
+    intensityValue: number,
+    dimensionItemIds: string[],
+    freeText: Record<string, string>
+  ) {
     setHoveredEmotion(null)
     setSelections((prev) => {
-      // Toggle off if same emotion + same intensity tapped again; otherwise append
+      // Toggle off if same emotion tapped again; otherwise append
       const exists = prev.findIndex((s) => s.emotion.key === emotion.key)
       if (exists !== -1) return prev.filter((_, i) => i !== exists)
       return [...prev, { emotion, intensity: intensityValue }]
     })
     if (sessionId) {
       const dwellMs = Date.now() - wheelEnteredAt
-      await recordEmotionSelection(sessionId, emotion.ring, emotion.key, dwellMs, intensityValue).catch(() => {})
+      const seRecord = await recordEmotionSelection(sessionId, emotion.ring, emotion.key, dwellMs, intensityValue).catch(() => null)
+      // Persist ticked dimension items
+      if (seRecord && dimensionItemIds.length > 0) {
+        await saveEmotionDetails(sessionId, seRecord.id, dimensionItemIds).catch(() => {})
+      }
+      // Persist free-text entries as a single event (no schema change needed)
+      const hasFreeText = Object.values(freeText).some((v) => v.trim() !== '')
+      if (hasFreeText) {
+        await logEvent(sessionId, 'emotion_free_text', {
+          emotionKey: emotion.key,
+          ...freeText,
+        }).catch(() => {})
+      }
     }
     // Child mode: one tap → go straight to coping (no accumulation needed)
     if (level === 'child') {
@@ -85,7 +108,8 @@ export default function App() {
     if (sessionId) {
       await updateSession(sessionId, { overridingEmotion: last.emotion.key }).catch(() => {})
     }
-    setStep(level === 'adult' ? 'facts' : 'coping')
+    // Go to summary screen first so user can review their full emotion list
+    setStep('summary')
   }
 
   async function handleReflectionComplete(reflection: SessionReflection) {
@@ -136,13 +160,34 @@ export default function App() {
 
       {step === 'wheel' && (
         <div style={{ display: 'flex', flexDirection: 'column', overflowX: 'auto' }}>
-          <Header />
 
-          {mode === 'incident' && (
-            <div className="incident-banner" style={{ margin: '0 16px 4px' }}>
-              💬 Take a breath — find the word that fits best for this situation
-            </div>
-          )}
+          {/* ── Sticky header bar — fixed to viewport top, always visible ─────── */}
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
+            background: 'var(--paper)',
+            borderBottom: '1px solid #ece8e1',
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            padding: '10px 20px 8px',
+          }}>
+            <img src="/logo.png" alt="Wholeness with Willene" style={{ height: 52 }} />
+            {!loading && !error && (
+              <p className="supertitle" style={{ textAlign: 'center', margin: '6px 0 0', fontSize: 13 }}>
+                {level === 'child'
+                  ? 'TAP THE FEELING THAT FITS BEST'
+                  : selections.length === 0
+                  ? 'TAP FEELINGS THAT MATCH HOW YOU FEEL RIGHT NOW'
+                  : `${selections.length} FEELING${selections.length > 1 ? 'S' : ''} SELECTED · TAP MORE OR PRESS DONE`}
+              </p>
+            )}
+            {mode === 'incident' && (
+              <div className="incident-banner" style={{ margin: '4px 0 0', fontSize: 12 }}>
+                💬 Take a breath — find the word that fits best for this situation
+              </div>
+            )}
+          </div>
+
+          {/* Spacer so content starts below the fixed header (~110px tall) */}
+          <div style={{ height: 110 }} />
 
           {loading && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--golden)', fontStyle: 'italic' }}>
@@ -157,40 +202,20 @@ export default function App() {
 
           {!loading && !error && (
             <>
-              {/* Instruction hint */}
-              <p className="supertitle" style={{ textAlign: 'center', margin: '4px 0 0' }}>
-                {level === 'child'
-                  ? 'Tap the feeling that fits best'
-                  : selections.length === 0
-                  ? 'Tap feelings that match how you feel right now'
-                  : `${selections.length} feeling${selections.length > 1 ? 's' : ''} selected · tap more or press Done`}
-              </p>
-
-              {/* Wheel — fixed 900px so all labels render crisply.
+              {/* Wheel — fixed 1750px so all labels render crisply.
                   The page scrolls natively in both axes; JS centres the wheel
                   on mount so the core ring is the first thing the user sees. */}
-              <div
-                style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 8px' }}
-                ref={(el) => {
-                  if (el) {
-                    // On first render, scroll the wheel's centre into the middle
-                    // of the viewport. The wheel is 900px; centre = 450px from left.
-                    // We want that point at viewport centre horizontally.
-                    const vw = window.innerWidth
-                    const leftOffset = Math.max(0, (900 - vw) / 2)
-                    window.scrollTo({ left: leftOffset, top: 0, behavior: 'instant' })
-                  }
-                }}
-              >
+              <WheelContainer size={wheelSize}>
                 <FeelingsWheel
                   emotions={emotions}
                   level={level}
+                  size={wheelSize}
                   onEmotionSelect={handleEmotionSelect}
                   onEmotionHover={setHoveredEmotion}
                 />
-              </div>
+              </WheelContainer>
 
-              {/* ── Selected emotions list + Done button ─────────────────────────── */}
+              {/* ── Selected emotions chip list ───────────────────────────────────── */}
               {level !== 'child' && selections.length > 0 && (
                 <div style={{
                   margin: '0 16px 16px',
@@ -200,97 +225,36 @@ export default function App() {
                   overflow: 'hidden',
                   boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
                 }}>
-                  {/* Header row */}
-                  <div style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '12px 16px 10px',
-                    borderBottom: '1px solid #f0f0f0',
-                  }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: '#57606a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  <div style={{ padding: '8px 12px 4px', borderBottom: '1px solid #f0f0f0' }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: '#57606a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                       Your feelings
                     </span>
-                    <button
-                      onClick={handleDone}
-                      style={{
-                        padding: '8px 22px',
-                        background: '#1f2328', color: '#fff',
-                        border: 'none', borderRadius: 20,
-                        fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      Done →
-                    </button>
                   </div>
 
-                  {/* Scrollable grouped list */}
-                  <div style={{ maxHeight: 220, overflowY: 'auto', padding: '8px 0' }}>
-                    {(() => {
-                      // Group selections by core sector colour + label
-                      const groups = new Map<string, { coreLabel: string; colour: string; items: Selection[] }>()
-                      selections.forEach((sel) => {
-                        // Find the core ancestor: walk up parentKey chain
-                        const allEm = emotions
-                        let current: Emotion | undefined = sel.emotion
-                        let coreEm: Emotion = sel.emotion
-                        while (current) {
-                          if (current.ring === 'core') { coreEm = current; break }
-                          current = allEm.find((e) => e.key === current!.parentKey)
-                          if (current) coreEm = current
-                        }
-                        const key = coreEm.key
-                        if (!groups.has(key)) groups.set(key, { coreLabel: coreEm.label, colour: coreEm.sectorColour, items: [] })
-                        groups.get(key)!.items.push(sel)
-                      })
-
-                      return Array.from(groups.values()).map((group) => (
-                        <div key={group.coreLabel} style={{ marginBottom: 4 }}>
-                          {/* Core heading */}
-                          <div style={{
-                            display: 'flex', alignItems: 'center', gap: 7,
-                            padding: '4px 16px',
-                          }}>
-                            <span style={{ width: 10, height: 10, borderRadius: '50%', background: group.colour, display: 'inline-block', flexShrink: 0 }} />
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#57606a', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                              {group.coreLabel}
-                            </span>
-                          </div>
-                          {/* Emotion chips */}
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '2px 16px 6px 32px' }}>
-                            {group.items.map((sel) => (
-                              <button
-                                key={sel.emotion.key}
-                                onClick={() => setSelections((prev) => prev.filter((s) => s.emotion.key !== sel.emotion.key))}
-                                title="Tap to remove"
-                                style={{
-                                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                                  padding: '4px 10px 4px 8px',
-                                  background: sel.emotion.sectorColour + '22',
-                                  border: `1.5px solid ${sel.emotion.sectorColour}`,
-                                  borderRadius: 20, cursor: 'pointer',
-                                  fontSize: 13, fontWeight: 500, color: '#1f2328',
-                                  fontFamily: 'inherit',
-                                }}
-                              >
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: sel.emotion.sectorColour, flexShrink: 0 }} />
-                                {sel.emotion.label}
-                                <span style={{
-                                  marginLeft: 2,
-                                  fontSize: 11, fontWeight: 700,
-                                  color: sel.emotion.sectorColour,
-                                  background: '#fff',
-                                  borderRadius: 10, padding: '1px 5px',
-                                  border: `1px solid ${sel.emotion.sectorColour}44`,
-                                }}>
-                                  {sel.intensity}
-                                </span>
-                                <span style={{ fontSize: 10, color: '#aaa', marginLeft: 1 }}>✕</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    })()}
+                  {/* Flat list sorted by descending intensity — no intensity shown, no grouping */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '10px 16px 12px' }}>
+                    {[...selections]
+                      .sort((a, b) => b.intensity - a.intensity)
+                      .map((sel) => (
+                        <button
+                          key={sel.emotion.key}
+                          onClick={() => setSelections((prev) => prev.filter((s) => s.emotion.key !== sel.emotion.key))}
+                          title="Tap to remove"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '4px 10px 4px 8px',
+                            background: sel.emotion.sectorColour + '22',
+                            border: `1.5px solid ${sel.emotion.sectorColour}`,
+                            borderRadius: 20, cursor: 'pointer',
+                            fontSize: 13, fontWeight: 500, color: '#1f2328',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: sel.emotion.sectorColour, flexShrink: 0 }} />
+                          {sel.emotion.label}
+                          <span style={{ fontSize: 10, color: '#aaa', marginLeft: 1 }}>✕</span>
+                        </button>
+                      ))}
                   </div>
                 </div>
               )}
@@ -304,11 +268,73 @@ export default function App() {
               level={level}
               onSelect={() => {
                 // For child/adult clicking "select" from definition panel: go via wheel flow
-                handleEmotionSelect(hoveredEmotion, intensity)
+                handleEmotionSelect(hoveredEmotion, intensity, [], {})
               }}
               onClose={() => setHoveredEmotion(null)}
             />
           )}
+        </div>
+      )}
+
+      {/* ── Summary step — shows all selected emotions before continuing ─────── */}
+      {step === 'summary' && (
+        <div style={{ maxWidth: 520, margin: '0 auto', padding: '32px 24px' }}>
+          <Header back={() => setStep('wheel')} />
+          <h2 style={{ fontSize: 22, fontWeight: 700, margin: '24px 0 6px', textAlign: 'center' }}>
+            How you're feeling
+          </h2>
+          <p style={{ fontSize: 14, color: '#57606a', textAlign: 'center', margin: '0 0 28px' }}>
+            {selections.length === 1
+              ? 'You named 1 feeling this session.'
+              : `You named ${selections.length} feelings this session.`}
+          </p>
+          {/* Emotion chips — sorted by descending intensity, colour-coded */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 36 }}>
+            {[...selections]
+              .sort((a, b) => b.intensity - a.intensity)
+              .map((sel) => (
+                <span
+                  key={sel.emotion.key}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '7px 14px 7px 10px',
+                    background: sel.emotion.sectorColour + '22',
+                    border: `1.5px solid ${sel.emotion.sectorColour}`,
+                    borderRadius: 22,
+                    fontSize: 15, fontWeight: 600, color: '#1f2328',
+                  }}
+                >
+                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: sel.emotion.sectorColour, flexShrink: 0 }} />
+                  {sel.emotion.label}
+                </span>
+              ))}
+          </div>
+          <button
+            onClick={() => setStep('feedback')}
+            style={{
+              display: 'block', width: '100%',
+              padding: '14px',
+              background: '#1f2328', color: '#fff',
+              border: 'none', borderRadius: 10,
+              fontSize: 15, fontWeight: 600, cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Continue →
+          </button>
+          <button
+            onClick={() => setStep('wheel')}
+            style={{
+              display: 'block', width: '100%', marginTop: 10,
+              padding: '12px',
+              background: 'none', color: '#57606a',
+              border: '1px solid #e5e7eb', borderRadius: 10,
+              fontSize: 14, cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            ← Back to wheel
+          </button>
         </div>
       )}
 
@@ -344,12 +370,85 @@ export default function App() {
         </>
       )}
 
-      {step === 'complete' && selectedEmotion && (
-        <SessionComplete emotion={selectedEmotion} onStartAgain={handleStartAgain} />
+      {step === 'complete' && selections.length > 0 && (
+        <SessionComplete selections={selections} onStartAgain={handleStartAgain} />
       )}
 
       {step === 'wheel' && sessionId && hoveredEmotion && (
         <HoverLogger sessionId={sessionId} emotionKey={hoveredEmotion.key} />
+      )}
+
+      {/* ── Fixed controls — only visible on the wheel step ──────────────────── */}
+      {step === 'wheel' && (
+        <>
+          {/* Left side: Back + Done */}
+          <div style={{
+            position: 'fixed', bottom: 24, left: 24, zIndex: 100,
+            display: 'flex', flexDirection: 'column', gap: 6,
+          }}>
+            <button
+              onClick={handleStartAgain}
+              title="Back to start"
+              style={{
+                height: 44, padding: '0 18px',
+                background: '#fff', color: '#1f2328',
+                border: '1.5px solid #e5e7eb', borderRadius: 22,
+                fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.10)',
+                fontFamily: 'inherit', gap: 6,
+              }}
+            >← Back</button>
+            {selections.length > 0 && (
+              <button
+                onClick={handleDone}
+                title="Done — review your feelings"
+                style={{
+                  height: 44, padding: '0 18px',
+                  background: '#1f2328', color: '#fff',
+                  border: 'none', borderRadius: 22,
+                  fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.22)',
+                  fontFamily: 'inherit', gap: 6,
+                }}
+              >Done →</button>
+            )}
+          </div>
+
+          {/* Right side: Zoom in / Zoom out */}
+          <div style={{
+            position: 'fixed', bottom: 24, right: 24, zIndex: 100,
+            display: 'flex', flexDirection: 'column', gap: 6,
+          }}>
+            <button
+              onClick={() => setWheelSize((s) => Math.min(s + ZOOM_STEP, ZOOM_MAX))}
+              title="Zoom in"
+              style={{
+                width: 44, height: 44,
+                background: '#1f2328', color: '#fff',
+                border: 'none', borderRadius: 22,
+                fontSize: 22, fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.22)',
+                lineHeight: 1,
+              }}
+            >+</button>
+            <button
+              onClick={() => setWheelSize((s) => Math.max(s - ZOOM_STEP, ZOOM_MIN))}
+              title="Zoom out"
+              style={{
+                width: 44, height: 44,
+                background: '#1f2328', color: '#fff',
+                border: 'none', borderRadius: 22,
+                fontSize: 26, fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.22)',
+                lineHeight: 1,
+              }}
+            >−</button>
+          </div>
+        </>
       )}
     </div>
   )
@@ -358,4 +457,35 @@ export default function App() {
 function HoverLogger({ sessionId, emotionKey }: { sessionId: string; emotionKey: string }) {
   useEffect(() => { logEvent(sessionId, 'definition_viewed', { emotionKey }).catch(() => {}) }, [sessionId, emotionKey])
   return null
+}
+
+// WheelContainer — centres the wheel both horizontally and vertically on mount and
+// whenever the size changes (zoom in/out).  The sticky header is ~110px tall, so
+// the usable viewport height starts there.  We want the geometric centre of the SVG
+// (size/2) to sit at the vertical midpoint of the remaining screen area.
+function WheelContainer({ children, size }: { children: React.ReactNode; size: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const HEADER_H = 110           // fixed sticky header height (px)
+    const PADDING  = 8             // top padding added by the container div below
+    const vw = window.innerWidth
+    const vh = window.innerHeight
+
+    // Horizontal: centre the wheel — scroll right so the wheel centre is on screen
+    const leftOffset = Math.max(0, (size - vw) / 2)
+
+    // Vertical: the SVG starts at HEADER_H + PADDING from the top of the document.
+    // We want the SVG centre (size/2) to land at the vertical midpoint of the
+    // area below the header ((vh - HEADER_H) / 2).
+    // scrollTop = (svgTop + size/2) - (vh / 2)
+    const svgTop    = HEADER_H + PADDING
+    const topOffset = Math.max(0, svgTop + size / 2 - vh / 2)
+
+    window.scrollTo({ left: leftOffset, top: topOffset, behavior: 'smooth' })
+  }, [size]) // re-centre whenever size changes (also fires on mount)
+  return (
+    <div ref={ref} style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 8px' }}>
+      {children}
+    </div>
+  )
 }

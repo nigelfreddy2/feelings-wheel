@@ -27,7 +27,15 @@ import { describeArc, arcLabelPath, buildWheelLayout } from './wheelMath'
 interface Props {
   emotions: Emotion[]
   level: Level
-  onEmotionSelect: (emotion: Emotion, intensity: number) => void
+  size?: number   // rendered px size of the SVG — defaults to 1750
+  // dimensionItemIds: ticked emotion detail bullet ids
+  // freeText: { about, [dimKey]: otherText } — optional free-form entries per section
+  onEmotionSelect: (
+    emotion: Emotion,
+    intensity: number,
+    dimensionItemIds: string[],
+    freeText: Record<string, string>
+  ) => void
   onEmotionHover: (emotion: Emotion | null) => void
 }
 
@@ -51,9 +59,10 @@ const GAP_MID  = 0.008
 const GAP_SPEC = 0.001
 
 // ── Font sizes ───────────────────────────────────────────────────────────────
-const FONT_CORE = 18
-const FONT_MID  = 13
-const FONT_SPEC = 8
+const FONT_CORE     = 18
+const FONT_CORE_MIN = 10   // smallest acceptable core label font
+const FONT_MID      = 13
+const FONT_SPEC     = 8
 
 // ── Roughjs sketch options ───────────────────────────────────────────────────
 const ROUGH_OPTS_BASE = { roughness: 1.2, bowing: 0.8, fillStyle: 'solid' as const, strokeWidth: 1.2 }
@@ -129,15 +138,53 @@ function bestLabelForArc(
   return null
 }
 
+// fitLabelForArc
+// ─────────────────────────────────────────────────────────────────────────────
+// PURPOSE
+//   Always returns a label and font size for the arc — never suppresses the label.
+//   Tries the full label at the given fontSize, then scales the font down in 0.5px
+//   steps to FONT_SPEC_MIN. If it still doesn't fit, tries just the first word
+//   with the same scaling. Always returns at least the first word at FONT_SPEC_MIN.
+const FONT_SPEC_MIN = 6
+function fitLabelForArc(
+  text: string,
+  fontSize: number,
+  arcSpanRad: number,
+  radius: number,
+  gap: number,
+  ringDepth: number
+): { text: string; fontSize: number } {
+  // Try full label, stepping font down
+  for (let f = fontSize; f >= FONT_SPEC_MIN; f -= 0.5) {
+    if (spokeLabelFitsArc(text, f, arcSpanRad, radius, gap, ringDepth)) return { text, fontSize: f }
+  }
+  // Try first word only, stepping font down
+  const firstWord = text.split(' ')[0]
+  for (let f = fontSize; f >= FONT_SPEC_MIN; f -= 0.5) {
+    if (spokeLabelFitsArc(firstWord, f, arcSpanRad, radius, gap, ringDepth)) return { text: firstWord, fontSize: f }
+  }
+  // Last resort: show first word at minimum size
+  return { text: firstWord, fontSize: FONT_SPEC_MIN }
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 
-export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmotionHover }: Props) {
+export default function FeelingsWheel({ emotions, level, size = 1750, onEmotionSelect, onEmotionHover }: Props) {
   const svgRef  = useRef<SVGSVGElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const [selectedCoreKey, setSelectedCoreKey] = useState<string | null>(null)
   const [selectedMidKey,  setSelectedMidKey]  = useState<string | null>(null)
   const [pendingEmotion,  setPendingEmotion]  = useState<Emotion | null>(null)
+  const [pendingPos,      setPendingPos]      = useState({ x: 0, y: 0 })
   const [intensity,       setIntensity]       = useState(5)
+  // Dimension items the user ticks in the Emotion Regulation panel
+  const [selectedDimItems, setSelectedDimItems] = useState<Set<string>>(new Set())
+  // Which accordion sections are open — key = dimension string
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set())
+  // Free-text per section: 'about' = top-level field, dim keys = "Other" inputs
+  const [freeTexts,    setFreeTexts]    = useState<Record<string, string>>({})
+  // Which side-panel is open: 'regulation' | null (placeholders added later)
+  const [activePanel,  setActivePanel]  = useState<'regulation' | null>(null)
 
   // ── Tooltip state ─────────────────────────────────────────────────────────
   // tooltipEmotion: the emotion currently hovered (null = hidden)
@@ -298,39 +345,71 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
   useEffect(() => { drawSketchy() }, [drawSketchy])
 
   // ── Interaction handlers ─────────────────────────────────────────────────
-  function openIntensity(emotion: Emotion) {
-    if (level === 'child') { onEmotionSelect(emotion, 5); return }
+  function openIntensity(emotion: Emotion, clickX = 0, clickY = 0) {
+    if (level === 'child') { onEmotionSelect(emotion, 5, [], {}); return }
     setIntensity(5)
+    setSelectedDimItems(new Set())
+    setOpenSections(new Set())
+    setFreeTexts({})
+    setActivePanel(null)
     setPendingEmotion(emotion)
+    setPendingPos({ x: clickX, y: clickY })
     onEmotionHover(emotion)
   }
 
   function confirmSelection() {
     if (!pendingEmotion) return
-    onEmotionSelect(pendingEmotion, intensity)
+    const trimmed = Object.fromEntries(
+      Object.entries(freeTexts).filter(([, v]) => v.trim() !== '')
+    )
+    onEmotionSelect(pendingEmotion, intensity, Array.from(selectedDimItems), trimmed)
     setPendingEmotion(null)
+    setSelectedDimItems(new Set())
+    setOpenSections(new Set())
+    setFreeTexts({})
+    setActivePanel(null)
   }
 
   function cancelPending() {
     setPendingEmotion(null)
+    setSelectedDimItems(new Set())
+    setOpenSections(new Set())
+    setFreeTexts({})
+    setActivePanel(null)
     onEmotionHover(null)
+  }
+
+  function toggleDimItem(id: string) {
+    setSelectedDimItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+
+  function toggleSection(dim: string) {
+    setOpenSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(dim)) next.delete(dim); else next.add(dim)
+      return next
+    })
   }
 
   // handleCoreClick: every click opens the intensity overlay so the user can
   // select and save the feeling at whatever depth they choose.
   // selectedCoreKey drives the faded-sectors visual effect only.
-  function handleCoreClick(emotion: Emotion) {
+  function handleCoreClick(emotion: Emotion, e: React.MouseEvent) {
     setSelectedCoreKey((prev) => (prev === emotion.key ? null : emotion.key))
     setSelectedMidKey(null)
-    openIntensity(emotion)
+    openIntensity(emotion, e.clientX, e.clientY)
   }
 
-  function handleMidClick(emotion: Emotion) {
+  function handleMidClick(emotion: Emotion, e: React.MouseEvent) {
     setSelectedMidKey((prev) => (prev === emotion.key ? null : emotion.key))
-    openIntensity(emotion)
+    openIntensity(emotion, e.clientX, e.clientY)
   }
 
-  function handleSpecClick(emotion: Emotion) { openIntensity(emotion) }
+  function handleSpecClick(emotion: Emotion, e: React.MouseEvent) { openIntensity(emotion, e.clientX, e.clientY) }
 
   // handleMouseEnter: fires on segment hover — updates external hover state and
   // shows the tooltip. Position is set in handleSvgMouseMove.
@@ -390,40 +469,309 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
   // ────────────────────────────────────────────────────────────────────────
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      {/* Intensity overlay */}
-      {pendingEmotion && (
-        <div style={{
-          position: 'absolute', inset: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(255,255,255,0.92)', zIndex: 10, borderRadius: 12,
-        }}>
-          <div style={{ width: '100%', maxWidth: 320, padding: '28px 24px', background: '#fff', borderRadius: 14, boxShadow: '0 6px 24px rgba(0,0,0,0.12)', textAlign: 'center' }}>
-            <div style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: pendingEmotion.sectorColour, marginRight: 8, verticalAlign: 'middle' }} />
-            <strong style={{ fontSize: 20, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{pendingEmotion.label}</strong>
-            <p style={{ margin: '16px 0 6px', fontSize: 14, color: '#57606a' }}>How intense is this feeling right now?</p>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#57606a', marginBottom: 4, padding: '0 2px' }}>
-              <span>Mild</span><span>Moderate</span><span>Intense</span>
+      {/* Intensity card — anchored near the click point, clamped inside viewport.
+          onWheel stopPropagation prevents the page/wheel from scrolling when the
+          user scrolls inside the card — the card scroll is self-contained. */}
+      {pendingEmotion && (() => {
+        const CARD_W   = 340
+        const PAD      = 12
+        const HEADER_H = 116  // matches the fixed sticky header height
+        const PANEL_W  = 380  // width of the regulation side panel
+        const vw       = window.innerWidth
+        const vh       = window.innerHeight
+
+        // Horizontal: offset from click, clamped so card (+ possible panel) never leaves screen.
+        // If the regulation panel is open we need extra room to the right; prefer left side instead.
+        const spaceRight = vw - pendingPos.x - 16
+        const fitsRight  = spaceRight >= CARD_W + (activePanel === 'regulation' ? PANEL_W + 8 : 0) + PAD
+        const left = fitsRight
+          ? Math.min(pendingPos.x + 16, vw - CARD_W - PAD)
+          : Math.max(pendingPos.x - CARD_W - 16, PAD)
+
+        // Vertical: prefer just below the click, clamped so card stays on screen.
+        const rawTop = pendingPos.y + 16
+        const maxTop = vh - vh * 0.80 - PAD
+        const top    = Math.min(Math.max(rawTop, HEADER_H + PAD), maxTop)
+
+        // Dimension data definitions
+        const DIM_SECTIONS: { key: string; label: string }[] = [
+          { key: 'prompting_event',   label: 'What triggered it?' },
+          { key: 'biological_change', label: 'How does your body feel?' },
+          { key: 'expression_action', label: 'How are you acting?' },
+          { key: 'aftereffect',       label: 'What happens after?' },
+          { key: 'interpretation',    label: 'What are you telling yourself?' },
+        ]
+        const hasDbtData = DIM_SECTIONS.some(
+          ({ key }) => pendingEmotion.dimensions.some((d) => d.dimension === key)
+        )
+
+        // Count total ticked items + non-empty "Other" fields across all sections
+        const totalRegulationSelections = Array.from(selectedDimItems).length
+          + DIM_SECTIONS.filter(({ key }) => (freeTexts[key] ?? '').trim() !== '').length
+
+        const inputStyle: React.CSSProperties = {
+          width: '100%', marginTop: 8,
+          padding: '7px 10px',
+          border: '1px solid #e5e7eb', borderRadius: 8,
+          fontSize: 12, fontFamily: 'inherit',
+          boxSizing: 'border-box', resize: 'none',
+          color: '#1f2328',
+        }
+
+        // Shared pill button style factory
+        const pillBtn = (active: boolean, disabled: boolean, colour: string): React.CSSProperties => ({
+          flex: 1,
+          padding: '8px 6px',
+          fontSize: 11, fontWeight: 600,
+          fontFamily: 'inherit',
+          border: active ? `1.5px solid ${colour}` : '1.5px solid #e5e7eb',
+          borderRadius: 20,
+          background: active ? colour + '18' : disabled ? '#f7f8fa' : '#fff',
+          color: disabled ? '#bbb' : active ? colour : '#57606a',
+          cursor: disabled ? 'default' : 'pointer',
+          textAlign: 'center' as const,
+          lineHeight: 1.3,
+          position: 'relative' as const,
+        })
+
+        return (
+          <>
+            {/* ── Main intensity card ─────────────────────────────────────────── */}
+            <div
+              style={{
+                position: 'fixed', left, top, zIndex: 30,
+                width: CARD_W, background: '#fff', borderRadius: 14,
+                boxShadow: '0 6px 32px rgba(0,0,0,0.18)',
+                maxHeight: '80vh', overflowY: 'auto',
+                overscrollBehavior: 'contain',
+              }}
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div style={{ padding: '20px 20px 0', textAlign: 'center' }}>
+                <div style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: pendingEmotion.sectorColour, marginRight: 8, verticalAlign: 'middle' }} />
+                <strong style={{ fontSize: 20, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{pendingEmotion.label}</strong>
+              </div>
+
+              {/* Intensity slider */}
+              <div style={{ padding: '16px 20px 0' }}>
+                <p style={{ margin: '0 0 6px', fontSize: 13, color: '#57606a', textAlign: 'center' }}>How intense is this feeling right now?</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#57606a', marginBottom: 4 }}>
+                  <span>Mild</span><span>Moderate</span><span>Intense</span>
+                </div>
+                <input
+                  type="range" min={1} max={10} step={1} value={intensity}
+                  onChange={(e) => setIntensity(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: pendingEmotion.sectorColour, cursor: 'pointer' }}
+                  aria-label="Intensity slider 1 to 10"
+                />
+                <div style={{ fontSize: 26, fontWeight: 700, textAlign: 'center', margin: '6px 0 12px', color: pendingEmotion.sectorColour }}>
+                  {intensity} <span style={{ fontSize: 13, fontWeight: 400, color: '#57606a' }}>/ 10</span>
+                </div>
+              </div>
+
+              {/* ── "What is this about?" — always shown ────────────────────────── */}
+              <div style={{ borderTop: '1px solid #f0f0f0', padding: '12px 20px' }}>
+                <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: '#1f2328' }}>
+                  What is this about? <span style={{ fontWeight: 400, color: '#57606a' }}>(optional)</span>
+                </p>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. The argument this morning, feeling overlooked at work…"
+                  value={freeTexts['about'] ?? ''}
+                  onChange={(e) => setFreeTexts((prev) => ({ ...prev, about: e.target.value }))}
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* ── No detail data — simple free-text for cause ─────────────────── */}
+              {!hasDbtData && (
+                <div style={{ borderTop: '1px solid #f0f0f0', padding: '12px 20px' }}>
+                  <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: '#1f2328' }}>
+                    What caused it? <span style={{ fontWeight: 400, color: '#57606a' }}>(optional)</span>
+                  </p>
+                  <textarea
+                    rows={2}
+                    placeholder="What happened, or what were you thinking about…"
+                    value={freeTexts['cause'] ?? ''}
+                    onChange={(e) => setFreeTexts((prev) => ({ ...prev, cause: e.target.value }))}
+                    style={inputStyle}
+                  />
+                </div>
+              )}
+
+              {/* ── Tool button row ─────────────────────────────────────────────── */}
+              {/* Emotion Regulation opens the accordion side panel.               */}
+              {/* Paradigm Shift, Body Sensations, Patterns are coming soon.       */}
+              <div style={{ borderTop: '1px solid #f0f0f0', padding: '12px 16px' }}>
+                <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 600, color: '#57606a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Tools
+                </p>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {/* Emotion Regulation — active */}
+                  <button
+                    onClick={() => setActivePanel((p) => p === 'regulation' ? null : 'regulation')}
+                    style={pillBtn(activePanel === 'regulation', false, pendingEmotion.sectorColour)}
+                  >
+                    {totalRegulationSelections > 0 && (
+                      <span style={{
+                        position: 'absolute', top: -5, right: -5,
+                        width: 16, height: 16, borderRadius: '50%',
+                        background: pendingEmotion.sectorColour,
+                        color: '#fff', fontSize: 9, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>{totalRegulationSelections}</span>
+                    )}
+                    Emotion<br />Regulation
+                  </button>
+
+                  {/* Paradigm Shift — coming soon */}
+                  <button disabled style={pillBtn(false, true, '#999')}>
+                    Paradigm<br />Shift
+                    <br /><span style={{ fontSize: 9, color: '#bbb' }}>coming soon</span>
+                  </button>
+
+                  {/* Body Sensations — coming soon */}
+                  <button disabled style={pillBtn(false, true, '#999')}>
+                    Body<br />Sensations
+                    <br /><span style={{ fontSize: 9, color: '#bbb' }}>coming soon</span>
+                  </button>
+
+                  {/* Patterns — coming soon */}
+                  <button disabled style={pillBtn(false, true, '#999')}>
+                    Patterns
+                    <br /><span style={{ fontSize: 9, color: '#bbb' }}>coming soon</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: 10, padding: '14px 20px 20px', borderTop: '1px solid #f0f0f0' }}>
+                <button onClick={confirmSelection} style={{ flex: 1, padding: '12px', background: '#1f2328', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Select this feeling
+                </button>
+                <button onClick={cancelPending} style={{ padding: '12px 14px', background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, color: '#57606a', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Back
+                </button>
+              </div>
             </div>
-            <input
-              type="range" min={1} max={10} step={1} value={intensity}
-              onChange={(e) => setIntensity(Number(e.target.value))}
-              style={{ width: '100%', accentColor: pendingEmotion.sectorColour, cursor: 'pointer' }}
-              aria-label="Intensity slider 1 to 10"
-            />
-            <div style={{ fontSize: 28, fontWeight: 700, margin: '8px 0 20px', color: pendingEmotion.sectorColour }}>
-              {intensity} <span style={{ fontSize: 14, fontWeight: 400, color: '#57606a' }}>/ 10</span>
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={confirmSelection} style={{ flex: 1, padding: '12px', background: '#1f2328', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>
-                Select this feeling
-              </button>
-              <button onClick={cancelPending} style={{ padding: '12px 14px', background: 'none', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, color: '#57606a', cursor: 'pointer' }}>
-                Back
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
+            {/* ── Emotion Regulation side panel ───────────────────────────────── */}
+            {/* Slides in to the right of the main card (or left if near right edge). */}
+            {activePanel === 'regulation' && (
+              <div
+                style={{
+                  position: 'fixed',
+                  left: left + CARD_W + 8,
+                  top,
+                  zIndex: 30,
+                  width: PANEL_W,
+                  background: '#fff',
+                  borderRadius: 14,
+                  boxShadow: '0 6px 32px rgba(0,0,0,0.18)',
+                  maxHeight: '80vh',
+                  overflowY: 'auto',
+                  overscrollBehavior: 'contain',
+                }}
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+              >
+                {/* Panel header */}
+                <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#1f2328' }}>Emotion Regulation</p>
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#57606a' }}>What does {pendingEmotion.label.toLowerCase()} look like for you?</p>
+                  </div>
+                  <button
+                    onClick={() => setActivePanel(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#aaa', lineHeight: 1, padding: 4 }}
+                    aria-label="Close panel"
+                  >✕</button>
+                </div>
+
+                {/* Accordion sections */}
+                {hasDbtData
+                  ? DIM_SECTIONS.map(({ key: dimKey, label: dimLabel }) => {
+                    const items = pendingEmotion.dimensions.filter((d) => d.dimension === dimKey)
+                    if (items.length === 0) return null
+                    const isOpen = openSections.has(dimKey)
+                    const selectedCount = items.filter((d) => selectedDimItems.has(d.id)).length
+                    const hasOther = (freeTexts[dimKey] ?? '').trim() !== ''
+                    return (
+                      <div key={dimKey} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                        <button
+                          onClick={() => toggleSection(dimKey)}
+                          style={{
+                            width: '100%', padding: '11px 20px',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          <span style={{ fontSize: 13, fontWeight: 600, color: '#1f2328', textAlign: 'left' }}>
+                            {dimLabel}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {(selectedCount > 0 || hasOther) && (
+                              <span style={{
+                                fontSize: 11, fontWeight: 700,
+                                background: pendingEmotion.sectorColour,
+                                color: '#fff', borderRadius: 10, padding: '1px 7px',
+                              }}>{selectedCount + (hasOther ? 1 : 0)}</span>
+                            )}
+                            <span style={{ fontSize: 12, color: '#57606a' }}>{isOpen ? '▲' : '▼'}</span>
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div style={{ padding: '4px 20px 14px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                              {items.map((d) => {
+                                const ticked = selectedDimItems.has(d.id)
+                                return (
+                                  <button
+                                    key={d.id}
+                                    onClick={() => toggleDimItem(d.id)}
+                                    style={{
+                                      padding: '5px 10px',
+                                      background: ticked ? pendingEmotion.sectorColour + '22' : '#f7f8fa',
+                                      border: ticked
+                                        ? `1.5px solid ${pendingEmotion.sectorColour}`
+                                        : '1.5px solid #e5e7eb',
+                                      borderRadius: 16,
+                                      fontSize: 12, cursor: 'pointer',
+                                      color: '#1f2328', textAlign: 'left',
+                                      fontFamily: 'inherit', lineHeight: 1.4,
+                                    }}
+                                  >
+                                    {d.content}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Other…"
+                              value={freeTexts[dimKey] ?? ''}
+                              onChange={(e) => setFreeTexts((prev) => ({ ...prev, [dimKey]: e.target.value }))}
+                              style={{ ...inputStyle, marginTop: 0 }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                  : (
+                    <div style={{ padding: '20px', color: '#57606a', fontSize: 13 }}>
+                      No detailed regulation data is available for this emotion yet.
+                    </div>
+                  )
+                }
+              </div>
+            )}
+          </>
+        )
+      })()}
 
       {/* ── Hover tooltip ──────────────────────────────────────────────────── */}
       {/* Follows the mouse cursor; shows emotion name + truncated definition. */}
@@ -471,8 +819,8 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
       <svg
         ref={svgRef}
         viewBox="0 0 800 800"
-        width={900}
-        height={900}
+        width={size}
+        height={size}
         style={{ display: 'block', fontFamily: "'Caveat', cursive" }}
         aria-label="Feelings Wheel"
         role="img"
@@ -518,25 +866,40 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                 fill="transparent"
                 stroke="none"
                 className={`wheel-segment${isCoreSelected ? ' selected' : ''}`}
-                onClick={() => handleCoreClick(coreEmotion)}
+                onClick={(e) => handleCoreClick(coreEmotion, e)}
                 onMouseEnter={() => handleMouseEnter(coreEmotion)}
                 onMouseLeave={handleMouseLeave}
                 role="button"
                 aria-label={coreEmotion.label}
                 tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && handleCoreClick(coreEmotion)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCoreClick(coreEmotion, e as unknown as React.MouseEvent)}
               />
-              {/* Core label — arcs along the segment midline */}
-              <text
-                fontSize={FONT_CORE}
-                fontWeight="700"
-                fill="#1f2328"
-                style={{ pointerEvents: 'none', userSelect: 'none' }}
-              >
-                <textPath href={`#lp-core-${sector.coreKey}`} startOffset="50%" textAnchor="middle">
-                  {coreEmotion.label}
-                </textPath>
-              </text>
+              {/* Core label — arcs along the segment midline.
+                  For narrow sectors the arc is shorter than the label at FONT_CORE.
+                  We compute the available arc length and scale the font down so the
+                  text always fits, with FONT_CORE_MIN as the floor. */}
+              {(() => {
+                const r        = R_CORE_IN + (R_CORE_OUT - R_CORE_IN) * 0.60
+                const arcLen   = r * (sector.endAngle - sector.startAngle)
+                // Approximate char width at fontSize f for bold Caveat ≈ f * 0.62
+                const charW    = (f: number) => f * 0.62
+                const labelLen = (f: number) => coreEmotion.label.length * charW(f)
+                // Find the largest font that fits, stepping down from FONT_CORE
+                let fs = FONT_CORE
+                while (fs > FONT_CORE_MIN && labelLen(fs) > arcLen * 0.92) fs -= 0.5
+                return (
+                  <text
+                    fontSize={fs}
+                    fontWeight="700"
+                    fill="#1f2328"
+                    style={{ pointerEvents: 'none', userSelect: 'none' }}
+                  >
+                    <textPath href={`#lp-core-${sector.coreKey}`} startOffset="50%" textAnchor="middle">
+                      {coreEmotion.label}
+                    </textPath>
+                  </text>
+                )
+              })()}
 
               {/* Mid ring */}
               {level !== 'child' && mids.map((mid, idx) => {
@@ -560,13 +923,13 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                       fill="transparent"
                       stroke="none"
                       className={`wheel-segment${isMidSel ? ' selected' : ''}`}
-                      onClick={() => handleMidClick(mid)}
+                      onClick={(e) => handleMidClick(mid, e)}
                       onMouseEnter={() => handleMouseEnter(mid)}
                       onMouseLeave={handleMouseLeave}
                       role="button"
                       aria-label={mid.label}
                       tabIndex={0}
-                      onKeyDown={(e) => e.key === 'Enter' && handleMidClick(mid)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleMidClick(mid, e as unknown as React.MouseEvent)}
                     />
                     {/* Mid label — radial spoke orientation.
                         Suppressed when the arc is too narrow to fit the text tangentially
@@ -605,7 +968,7 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                         // The arc spans the full midSpan so the label check uses midSpan.
                         const emptyPath = describeArc(CX, CY, R_SPEC_IN, R_SPEC_OUT, midStart, midStart + midSpan, GAP_SPEC)
                         const emptyAng  = midStart + midSpan / 2
-                        const emptyLbl  = bestLabelForArc(mid.label, FONT_SPEC, midSpan, specLblR, GAP_SPEC, specDepth)
+                        const emptyFit  = fitLabelForArc(mid.label, FONT_SPEC, midSpan, specLblR, GAP_SPEC, specDepth)
                         return (
                           <g key={`spec-empty-${mid.key}`}>
                             <path
@@ -620,18 +983,16 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                               aria-label={mid.label}
                               tabIndex={0}
                             />
-                            {emptyLbl && (
-                              <text
-                                transform={radialLabelTransform(emptyAng, specLblR)}
-                                fontSize={FONT_SPEC}
-                                fill="#1f2328"
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                                style={{ pointerEvents: 'none', userSelect: 'none' }}
-                              >
-                                {emptyLbl}
-                              </text>
-                            )}
+                            <text
+                              transform={radialLabelTransform(emptyAng, specLblR)}
+                              fontSize={emptyFit.fontSize}
+                              fill="#1f2328"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              style={{ pointerEvents: 'none', userSelect: 'none' }}
+                            >
+                              {emptyFit.text}
+                            </text>
                           </g>
                         )
                       }
@@ -641,8 +1002,8 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                         const specPath   = describeArc(CX, CY, R_SPEC_IN, R_SPEC_OUT, specStart, specEnd, GAP_SPEC)
                         const specMidAng = (specStart + specEnd) / 2
                         const specLblTfm = radialLabelTransform(specMidAng, specLblR)
-                        // Use bestLabelForArc: tries full label, then first word, then null.
-                        const specLblText = bestLabelForArc(spec.label, FONT_SPEC, specSpan, specLblR, GAP_SPEC, specDepth)
+                        // fitLabelForArc: always returns a label + scaled font, never hides.
+                        const specFit    = fitLabelForArc(spec.label, FONT_SPEC, specSpan, specLblR, GAP_SPEC, specDepth)
 
                         return (
                           <g key={spec.key} className="ring-enter">
@@ -651,27 +1012,25 @@ export default function FeelingsWheel({ emotions, level, onEmotionSelect, onEmot
                               fill="transparent"
                               stroke="none"
                               className="wheel-segment"
-                              onClick={() => handleSpecClick(spec)}
+                              onClick={(e) => handleSpecClick(spec, e)}
                               onMouseEnter={() => handleMouseEnter(spec)}
                               onMouseLeave={handleMouseLeave}
                               role="button"
                               aria-label={spec.label}
                               tabIndex={0}
-                              onKeyDown={(e) => e.key === 'Enter' && handleSpecClick(spec)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleSpecClick(spec, e as unknown as React.MouseEvent)}
                             />
-                            {/* Spec label — spoke orientation; first word shown if full label too wide */}
-                            {specLblText && (
-                              <text
-                                transform={specLblTfm}
-                                fontSize={FONT_SPEC}
-                                fill="#1f2328"
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                                style={{ pointerEvents: 'none', userSelect: 'none' }}
-                              >
-                                {specLblText}
-                              </text>
-                            )}
+                            {/* Spec label — always shown, font scaled to fit the arc */}
+                            <text
+                              transform={specLblTfm}
+                              fontSize={specFit.fontSize}
+                              fill="#1f2328"
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              style={{ pointerEvents: 'none', userSelect: 'none' }}
+                            >
+                              {specFit.text}
+                            </text>
                           </g>
                         )
                       })

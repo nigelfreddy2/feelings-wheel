@@ -48,7 +48,8 @@ model EmotionDimension {
   source       String    @db.VarChar(100)
   displayOrder Int       @default(0)        @map("display_order") @db.SmallInt
 
-  emotion Emotion @relation(fields: [emotionKey], references: [key])
+  emotion  Emotion                @relation(fields: [emotionKey], references: [key])
+  selected SessionEmotionDetail[]
 
   @@map("emotion_dimensions")
 }
@@ -113,8 +114,27 @@ model SessionEmotion {
 
   session Session @relation(fields: [sessionId], references: [id])
   emotion Emotion @relation(fields: [emotionKey], references: [key])
+  details SessionEmotionDetail[]
 
   @@map("session_emotions")
+}
+
+// Per-dimension items the user ticked when selecting an emotion.
+// Each row links one SessionEmotion record to one EmotionDimension bullet.
+// Stored separately so analytics can aggregate "which prompting events /
+// body sensations / actions appear most frequently across sessions".
+model SessionEmotionDetail {
+  id                 String   @id @default(uuid()) @db.VarChar(36)
+  sessionEmotionId   String   @db.VarChar(36)  @map("session_emotion_id")
+  emotionDimensionId String   @db.VarChar(36)  @map("emotion_dimension_id")
+  createdAt          DateTime @default(now())  @map("created_at")
+
+  sessionEmotion   SessionEmotion   @relation(fields: [sessionEmotionId], references: [id])
+  emotionDimension EmotionDimension @relation(fields: [emotionDimensionId], references: [id])
+
+  // One SessionEmotion cannot tick the same dimension item twice
+  @@unique([sessionEmotionId, emotionDimensionId])
+  @@map("session_emotion_details")
 }
 
 // Full behavioural event log — raw material for AI analytics

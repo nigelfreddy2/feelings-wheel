@@ -9,7 +9,7 @@ interface Props {
 const levels: { value: Level; label: string; desc: string; emoji: string }[] = [
   { value: 'child',    label: 'Simple',   desc: 'Core feelings only — great for children or when starting out', emoji: '🌱' },
   { value: 'adult',    label: 'Moderate', desc: 'Core and more detailed feelings', emoji: '🌿' },
-  { value: 'advanced', label: 'Full',     desc: 'All feelings including clinical DBT vocabulary', emoji: '🌳' },
+  { value: 'advanced', label: 'Full',     desc: 'All feelings — the most detailed level', emoji: '🌳' },
 ]
 
 export default function LevelSelector({ value, onChange }: Props) {

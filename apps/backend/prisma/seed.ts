@@ -82,10 +82,11 @@ const coreEmotions = [
   { key: 'bad',       label: 'Bad',       colour: '#9E9AC8', definition: 'A general sense of feeling off, drained, or not right — not yet pinned down to a more specific emotion.' },
   { key: 'surprised', label: 'Surprised', colour: '#FD8D3C', definition: 'A brief emotional response to something unexpected, which can be positive, negative, or neutral.' },
   { key: 'fearful',   label: 'Fearful',   colour: '#FDAE6B', definition: 'A feeling of anxiety or apprehension about a perceived threat to safety, wellbeing, or self.' },
-  // DBT elevates these to first-class — not in original core ring but important enough to surface
   { key: 'shame',    label: 'Shame',    colour: '#C7B99A', definition: 'A painful feeling of humiliation or distress caused by awareness of wrong or foolish behaviour, or of being judged negatively by others.' },
   { key: 'guilt',    label: 'Guilt',    colour: '#B5CFD8', definition: 'A feeling of responsibility or remorse for a perceived offence, real or imagined, especially a moral one.' },
   { key: 'love',     label: 'Love',     colour: '#F4A7B9', definition: 'An intense feeling of deep affection, caring, or attraction toward a person, place, or thing.' },
+  { key: 'envy',     label: 'Envy',     colour: '#8DB4C4', definition: 'A painful longing for what someone else has — their possessions, qualities, or situation — often mixed with resentment.' },
+  { key: 'jealousy', label: 'Jealousy', colour: '#B09CC4', definition: 'A fear of losing something or someone important to a rival; a mix of anxiety, threat, and possessiveness.' },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -425,14 +426,14 @@ async function main() {
   }
   console.log(`  ✓ ${specificEmotions.length} specific emotions`)
 
-  // ── DBT Dimensions ────────────────────────────────────────────────────────
+  // ── Emotion Regulation dimensions (complete data from Handout 6) ──────────
 
-  console.log('🌱 Seeding DBT dimensions...')
+  console.log('🌱 Seeding emotion regulation dimensions...')
 
-  // ANGER dimensions
+  // ── ANGER ─────────────────────────────────────────────────────────────────
   await seedDimensions('angry', 'prompting_event', [
     'Having an important goal blocked.',
-    'You or someone you care about being attacked or threatened.',
+    'You or someone you care about being attacked or threatened by others.',
     'Losing power, status, or respect.',
     'Not having things turn out as expected.',
     'Physical or emotional pain.',
@@ -444,7 +445,7 @@ async function main() {
     'Believing that things "should" be different than they are.',
     'Rigidly thinking, "I\'m right."',
     'Judging that the situation is illegitimate or wrong.',
-    'Ruminating about the event that set off the anger.',
+    'Ruminating about the event that set off the anger in the first place.',
   ])
   await seedDimensions('angry', 'biological_change', [
     'Muscles tightening.',
@@ -452,23 +453,31 @@ async function main() {
     'Hands clenching.',
     'Feeling your face flush or get hot.',
     'Feeling like you are going to explode.',
-    'Wanting to hit someone, bang the wall, or throw something.',
+    'Being unable to stop tears.',
+    'Wanting to hit someone, bang the wall, throw something, blow up.',
+    'Wanting to hurt someone.',
   ])
   await seedDimensions('angry', 'expression_action', [
     'Physically or verbally attacking.',
     'Making aggressive or threatening gestures.',
     'Pounding, throwing things, breaking things.',
     'Walking heavily, stomping, slamming doors.',
+    'Walking out.',
     'Using a loud, quarrelsome, or sarcastic voice.',
+    'Using obscenities or swearing.',
     'Criticising or complaining.',
+    'Clenching your hands or fists.',
+    'Frowning, not smiling, mean expression.',
     'Brooding or withdrawing from others.',
+    'Crying.',
+    'A red or flushed face.',
   ])
   await seedDimensions('angry', 'aftereffect', [
     'Narrowing of attention.',
     'Attending only to the situation that is making you angry.',
-    'Ruminating about the situation or past similar situations.',
+    'Ruminating about the situation making you angry or about situations in the past.',
     'Imagining future situations that will make you angry.',
-    'Depersonalisation or numbness.',
+    'Depersonalisation, dissociative experiences, numbness.',
   ])
   await seedDimensions('angry', 'opposite_action', [
     'Gently avoid the person you are angry with rather than attacking.',
@@ -477,15 +486,135 @@ async function main() {
     'Step into the other person\'s shoes — imagine understanding and empathy.',
     'Unclench hands with palms up (willing hands). Relax facial muscles. Half-smile.',
     'Do paced breathing: breathe in deeply, breathe out slowly.',
-  ], 'adult', 'dbt-handout-11')
+  ], 'adult', 'emotion-regulation-handout-11')
 
-  // FEAR dimensions
+  // ── DISGUST ───────────────────────────────────────────────────────────────
+  await seedDimensions('disgusted', 'prompting_event', [
+    'Seeing/smelling human or animal waste products.',
+    'Having a person or an animal that is dirty, slimy, or unclean come close to you.',
+    'Tasting something or being forced to swallow something you really don\'t want.',
+    'Seeing or being near a dead body.',
+    'Observing or hearing about a person who grovels or strips another person of dignity.',
+    'Observing or hearing about betrayal, child abuse, racism, or other cruelty.',
+    'Being forced to watch something that deeply violates your own values.',
+    'Being confronted with someone who is deeply violating your own values.',
+  ])
+  await seedDimensions('disgusted', 'interpretation', [
+    'Believing that you are swallowing something toxic.',
+    'Believing your skin or your mind is being contaminated.',
+    'Believing your own body or body parts are ugly.',
+    'Believing others are evil or the "scum" of the earth.',
+    'Disapproving of or feeling morally superior to another.',
+    'Extreme disapproval of yourself or your own feelings, thoughts, or behaviours.',
+    'Judging that a person is deeply immoral or has sinned.',
+    'Judging someone\'s body as extremely ugly.',
+  ])
+  await seedDimensions('disgusted', 'biological_change', [
+    'Feelings of nausea; sick feeling.',
+    'Urge to vomit, gag, choke.',
+    'Having a lump in your throat.',
+    'Aversion to drinking or eating.',
+    'Intense urge to destroy or get rid of something.',
+    'Urge to take a shower.',
+    'Urge to run away or push away.',
+    'Feeling contaminated, dirty, unclean.',
+    'Feeling mentally polluted.',
+  ])
+  await seedDimensions('disgusted', 'expression_action', [
+    'Vomiting, spitting out.',
+    'Closing your eyes, looking away.',
+    'Washing, scrubbing, taking a bath.',
+    'Changing your clothes; cleaning spaces.',
+    'Avoiding eating or drinking.',
+    'Pushing or kicking away; running away.',
+    'Treating with disdain or disrespect.',
+    'Physically attacking causes of your disgust.',
+    'Using obscenities or cursing.',
+    'Frowning, or not smiling.',
+    'Nose and top lip tightened up; smirking.',
+  ])
+  await seedDimensions('disgusted', 'aftereffect', [
+    'Narrowing of attention.',
+    'Ruminating about the situation that is making you feel disgusted.',
+    'Becoming hypersensitive to dirt.',
+  ])
+  await seedDimensions('disgusted', 'opposite_action', [
+    'Move close. Embrace.',
+    'Be kind; step into the other person\'s shoes.',
+    'Take in what feels repulsive rather than turning away.',
+    'See the situation from the other person\'s point of view.',
+  ], 'adult', 'emotion-regulation-handout-11')
+
+  // ── ENVY ──────────────────────────────────────────────────────────────────
+  await seedDimensions('envy', 'prompting_event', [
+    'Someone has something you really want or need but don\'t or can\'t have.',
+    'You are not part of the "in" crowd.',
+    'Someone appears to have everything.',
+    'You are alone while others are having fun.',
+    'Someone else gets credit for what you\'ve done.',
+    'Someone gets positive recognition for something and you don\'t.',
+    'Others get something you really want and you don\'t get it.',
+    'Being around people who have more than you have.',
+    'Someone you are competing with is more successful than you in an area important to you.',
+  ])
+  await seedDimensions('envy', 'interpretation', [
+    'Thinking you deserve what others have.',
+    'Thinking others have more than you.',
+    'Thinking about how unfair it is that you have such a bad lot in life compared to others.',
+    'Thinking you have been treated unfairly by life.',
+    'Thinking you are unlucky.',
+    'Thinking you are inferior, a failure, or mediocre in comparison to others you want to be like.',
+    'Comparing yourself to others who have more than you.',
+    'Comparing yourself to people who have characteristics that you wish you had.',
+    'Thinking you are unappreciated.',
+  ])
+  await seedDimensions('envy', 'biological_change', [
+    'Muscles tightening.',
+    'Teeth clamping together, mouth tightening.',
+    'Feeling your face flush or get hot.',
+    'Feeling rigidity in your body.',
+    'Pain in the pit of the stomach.',
+    'Having an urge to get even.',
+    'Hating the other person.',
+    'Wanting to hurt the people you envy.',
+    'Wanting the person you envy to lose what they have, to have bad luck, or to be hurt.',
+    'Feeling pleasure when others experience failure or lose what they have.',
+    'Feeling unhappy if another person experiences some good luck.',
+    'Feeling motivated to improve yourself.',
+  ])
+  await seedDimensions('envy', 'expression_action', [
+    'Doing everything you can to get what the other person has.',
+    'Working a lot harder than you were to get what you want.',
+    'Trying to improve yourself and your situation.',
+    'Taking away or ruining what the other person has.',
+    'Attacking or criticising the other person.',
+    'Doing something to get even.',
+    'Doing something to make the other person fail or lose what they have.',
+    'Saying mean things about the other person or making them look bad to others.',
+    'Trying to show the other person up, to look better than them.',
+    'Avoiding persons who have what you want.',
+  ])
+  await seedDimensions('envy', 'aftereffect', [
+    'Narrowing of attention.',
+    'Attending only to what others have that you don\'t.',
+    'Ruminating when others have had more than you.',
+    'Discounting what you do have; not appreciating things you have or what others do for you.',
+    'Ruminating about what you don\'t have.',
+    'Making resolutions to change.',
+  ])
+
+  // ── FEAR ──────────────────────────────────────────────────────────────────
   await seedDimensions('fearful', 'prompting_event', [
     'Having your life, health, or wellbeing threatened.',
-    'Being in a situation where you were threatened or hurt in the past.',
+    'Being in the same situation where you have been threatened or hurt in the past.',
     'Flashbacks.',
+    'Being in situations where you have seen others threatened or hurt.',
+    'Silence.',
     'Being in a new or unfamiliar situation.',
-    'Being alone.',
+    'Being alone (e.g. walking alone, being home alone, living alone).',
+    'Being in the dark.',
+    'Being in crowds.',
+    'Leaving your home.',
     'Having to perform in front of others.',
     'Pursuing your dreams.',
   ])
@@ -495,84 +624,275 @@ async function main() {
     'Believing you might lose something valuable.',
     'Believing someone might reject, criticise, or dislike you.',
     'Believing you will embarrass yourself.',
-    'Expecting to fail.',
+    'Failure is possible; expecting to fail.',
+    'Believing that you will not get help you want or need.',
+    'Believing you might lose someone important.',
     'Believing you are helpless or losing a sense of control.',
+    'Believing you are incompetent or losing mastery.',
   ])
   await seedDimensions('fearful', 'biological_change', [
     'Breathlessness.',
     'Fast heartbeat.',
-    'Choking sensation or lump in throat.',
-    'Muscles tensing or cramping.',
+    'Choking sensation, lump in throat.',
+    'Muscles tensing, cramping.',
+    'Clenching teeth.',
+    'Urge to scream or call out.',
     'Feeling nauseated.',
-    'Getting cold or feeling clammy.',
-    'Feeling of butterflies in stomach.',
+    'Getting cold; feeling clammy.',
+    'Feeling your hairs standing on end.',
+    'Feeling of "butterflies" in stomach.',
     'Wanting to run away or avoid things.',
   ])
   await seedDimensions('fearful', 'expression_action', [
-    'Fleeing or running away.',
+    'Fleeing, running away.',
+    'Running or walking hurriedly.',
     'Hiding from or avoiding what you fear.',
-    'Frozen stare or freezing.',
+    'Engaging in nervous, fearful talk.',
+    'Pleading or crying for help.',
+    'Talking less or becoming speechless.',
     'Screaming or yelling.',
-    'Shaking, quivering, or trembling.',
-    'Crying or whimpering.',
+    'Darting eyes or quickly looking around.',
+    'Frozen stare.',
     'Talking yourself out of doing what you fear.',
+    'Freezing, or trying not to move.',
+    'Crying or whimpering.',
+    'Shaking, quivering, or trembling.',
+    'A shaky or trembling voice.',
+    'Sweating or perspiring.',
   ])
   await seedDimensions('fearful', 'aftereffect', [
     'Narrowing of attention.',
     'Being hypervigilant to threat.',
-    'Losing your ability to focus or becoming disoriented.',
+    'Losing your ability to focus or becoming disoriented or dazed.',
+    'Losing control.',
     'Imagining the possibility of more loss or failure.',
     'Isolating yourself.',
+    'Ruminating about other threatening times.',
   ])
   await seedDimensions('fearful', 'opposite_action', [
-    'Do what you are afraid of doing... over and over.',
+    'Do what you are afraid of doing — over and over.',
     'Approach events, places, tasks, and people you are afraid of.',
     'Keep your eyes and ears open and focused on the feared event.',
     'Take in the information from the situation — notice that you are safe.',
     'Keep a confident posture: head and eyes up, shoulders back but relaxed.',
     'Do paced breathing: breathe in deeply and breathe out slowly.',
-  ], 'adult', 'dbt-handout-11')
+  ], 'adult', 'emotion-regulation-handout-11')
 
-  // SADNESS dimensions
+  // ── HAPPINESS ─────────────────────────────────────────────────────────────
+  await seedDimensions('happy', 'prompting_event', [
+    'Receiving a wonderful surprise.',
+    'Reality exceeding your expectations.',
+    'Getting what you want.',
+    'Getting something you have worked hard for or worried about.',
+    'Things turning out better than you thought they would.',
+    'Being successful at a task.',
+    'Achieving a desirable outcome.',
+    'Receiving esteem, respect, or praise.',
+    'Receiving love, liking, or affection.',
+    'Being accepted by others.',
+    'Belonging somewhere or with someone or a group.',
+    'Being with or in contact with people who love or like you.',
+    'Having very pleasurable sensations.',
+  ])
+  await seedDimensions('happy', 'interpretation', [
+    'Interpreting joyful events just as they are, without adding or subtracting.',
+  ])
+  await seedDimensions('happy', 'biological_change', [
+    'Feeling excited.',
+    'Feeling physically energetic, active.',
+    'Feeling like giggling or laughing.',
+    'Feeling your face flush.',
+    'Feeling calm all the way through.',
+    'Urge to keep doing what is associated with happiness.',
+    'Feeling at peace.',
+    'Feeling open or expansive.',
+  ])
+  await seedDimensions('happy', 'expression_action', [
+    'Smiling.',
+    'Having a bright, glowing face.',
+    'Being bouncy or bubbly.',
+    'Communicating your good feelings.',
+    'Sharing the feeling.',
+    'Hugging people.',
+    'Jumping up and down.',
+    'Saying positive things.',
+    'Using an enthusiastic or excited voice.',
+    'Being talkative or talking a lot.',
+  ])
+  await seedDimensions('happy', 'aftereffect', [
+    'Being courteous or friendly to others.',
+    'Doing nice things for other people.',
+    'Having a positive outlook; seeing the bright side.',
+    'Having a high threshold for worry or annoyance.',
+    'Remembering and imagining other times you have felt joyful.',
+    'Expecting to feel joyful in the future.',
+  ])
+
+  // ── JEALOUSY ──────────────────────────────────────────────────────────────
+  await seedDimensions('jealousy', 'prompting_event', [
+    'An important relationship is threatened or in danger of being lost.',
+    'A potential competitor pays attention to someone you love.',
+    'Someone is threatening to take away important things in your life.',
+    'Someone goes out with the person you like.',
+    'Someone ignores you while talking to a friend of yours.',
+    'Someone is more attractive, outgoing, or self-confident than you.',
+    'You are treated as unimportant by a person you want to be close to.',
+    'Your partner tells you that they desire more time alone.',
+    'Your partner appears to flirt with someone else.',
+    'You find the person you love is having an affair with someone else.',
+  ])
+  await seedDimensions('jealousy', 'interpretation', [
+    'Believing your partner does not care for you any more.',
+    'Believing you are nothing to your partner.',
+    'Believing your partner is going to leave you.',
+    'Believing your partner is behaving inappropriately.',
+    'Believing you don\'t measure up to your peers.',
+    'Believing you deserve more than what you are receiving.',
+    'Believing you were cheated.',
+    'Believing no one cares about you.',
+  ])
+  await seedDimensions('jealousy', 'biological_change', [
+    'Breathlessness.',
+    'Fast heartbeat.',
+    'Choking sensation, lump in throat.',
+    'Muscles tensing.',
+    'Teeth clenching.',
+    'Becoming suspicious of others.',
+    'Having injured pride.',
+    'Feelings of rejection.',
+    'Needing to be in control.',
+    'Feeling helpless.',
+    'Wanting to grasp or keep hold of what you have.',
+    'Wanting to push away or eliminate your rival.',
+  ])
+  await seedDimensions('jealousy', 'expression_action', [
+    'Violent behaviour or threats of violence toward the person threatening to take something away.',
+    'Attempting to control the freedom of the person you are afraid of losing.',
+    'Verbal accusations of disloyalty or unfaithfulness.',
+    'Spying on the person.',
+    'Interrogating the person; demanding accounting of time or activities.',
+    'Collecting evidence of wrongdoings.',
+    'Clinging; enhanced dependency.',
+    'Increased or excessive demonstrations of love.',
+  ])
+  await seedDimensions('jealousy', 'aftereffect', [
+    'Narrowing of attention.',
+    'Seeing the worst in others.',
+    'Being mistrustful across the board.',
+    'Being hypervigilant to threats to your relationships.',
+    'Becoming isolated or withdrawn.',
+  ])
+
+  // ── LOVE ──────────────────────────────────────────────────────────────────
+  await seedDimensions('love', 'prompting_event', [
+    'A person offers or gives you something you want, need, or desire.',
+    'A person does things you want or need.',
+    'A person does things you particularly value or admire.',
+    'Feeling physically attracted to someone.',
+    'Being with someone you have fun with.',
+    'You spend a lot of time with a person.',
+    'You share a special experience with a person.',
+    'You have exceptionally good communication with a person.',
+  ])
+  await seedDimensions('love', 'interpretation', [
+    'Believing that a person loves, needs, or appreciates you.',
+    'Thinking that a person is physically attractive.',
+    'Judging a person\'s personality as wonderful, pleasing, or attractive.',
+    'Believing that a person can be counted on, or will always be there for you.',
+  ])
+  await seedDimensions('love', 'biological_change', [
+    'Feeling excited and full of energy.',
+    'Fast heartbeat.',
+    'Feeling self-confident.',
+    'Feeling invulnerable.',
+    'Feeling happy, joyful, or exuberant.',
+    'Feeling warm, trusting, and secure.',
+    'Feeling relaxed and calm.',
+    'Wanting the best for a person.',
+    'Wanting to give things to a person.',
+    'Wanting to see and spend time with a person.',
+    'Wanting physical closeness.',
+    'Wanting emotional closeness.',
+  ])
+  await seedDimensions('love', 'expression_action', [
+    'Saying "I love you."',
+    'Expressing positive feelings to a person.',
+    'Eye contact, mutual gaze.',
+    'Touching, petting, hugging, holding, cuddling.',
+    'Smiling.',
+    'Sharing time and experiences with someone.',
+    'Doing things that the other person wants or needs.',
+  ])
+  await seedDimensions('love', 'aftereffect', [
+    'Only seeing a person\'s positive side.',
+    'Feeling forgetful or distracted; daydreaming.',
+    'Feeling openness and trust.',
+    'Feeling "alive," capable.',
+    'Remembering other people you have loved.',
+    'Remembering other people who have loved you.',
+    'Believing in yourself; believing you are wonderful, capable, competent.',
+  ])
+
+  // ── SADNESS ───────────────────────────────────────────────────────────────
   await seedDimensions('sad', 'prompting_event', [
     'Losing something or someone irretrievably.',
     'The death of someone you love.',
+    'Things not being what you expected or wanted.',
     'Things being worse than you expected.',
     'Being separated from someone you care for.',
+    'Getting what you don\'t want.',
+    'Not getting what you have worked for.',
+    'Not getting what you believe you need in life.',
     'Being rejected, disapproved of, or excluded.',
-    'Being alone or feeling like an outsider.',
+    'Discovering that you are powerless or helpless.',
+    'Being with someone else who is sad or in pain.',
+    'Reading or hearing about other people\'s problems or troubles.',
+    'Being alone, or feeling isolated or like an outsider.',
     'Thinking about your losses.',
+    'Thinking about missing someone.',
   ])
   await seedDimensions('sad', 'interpretation', [
-    'Believing that a separation from someone will last forever.',
+    'Believing that a separation from someone will last for a long time or will never end.',
     'Believing that you will not get what you want or need in your life.',
     'Seeing things or your life as hopeless.',
     'Believing that you are worthless or not valuable.',
   ])
   await seedDimensions('sad', 'biological_change', [
     'Feeling tired, run down, or low in energy.',
-    'Feeling lethargic or listless.',
+    'Feeling lethargic, listless; wanting to stay in bed all day.',
+    'Feeling as if nothing is pleasurable any more.',
     'Pain or hollowness in your chest or gut.',
     'Feeling empty.',
+    'Feeling as if you can\'t stop crying.',
     'Difficulty swallowing.',
-    'Breathlessness or dizziness.',
+    'Breathlessness.',
+    'Dizziness.',
   ])
   await seedDimensions('sad', 'expression_action', [
-    'Acting helpless, staying in bed, being inactive.',
+    'Avoiding things.',
+    'Acting helpless; staying in bed; being inactive.',
+    'Moping, brooding, or acting moody.',
+    'Making slow, shuffling movements.',
     'Withdrawing from social contact.',
     'Avoiding activities that used to bring pleasure.',
     'Giving up and no longer trying to improve.',
+    'Saying sad things.',
+    'Talking little or not at all.',
     'Using a quiet, slow, or monotonous voice.',
+    'Eyes drooping.',
+    'Frowning, not smiling.',
     'Posture slumping.',
-    'Sobbing, crying, or whimpering.',
+    'Sobbing, crying, whimpering.',
   ])
   await seedDimensions('sad', 'aftereffect', [
     'Not being able to remember happy things.',
     'Feeling irritable, touchy, or grouchy.',
     'Yearning and searching for the thing lost.',
     'Having a negative outlook.',
+    'Blaming or criticising yourself.',
     'Ruminating about sad events in the past.',
-    'Insomnia or appetite disturbance.',
+    'Insomnia.',
+    'Appetite disturbance, indigestion.',
   ])
   await seedDimensions('sad', 'opposite_action', [
     'Activate your behaviour — avoid avoiding.',
@@ -580,83 +900,96 @@ async function main() {
     'Build mastery: do one thing that gives you a sense of accomplishment.',
     'Reach out to someone rather than withdrawing.',
     'Do something from your pleasant events list.',
-  ], 'adult', 'dbt-handout-11')
+  ], 'adult', 'emotion-regulation-handout-11')
 
-  // DISGUST dimensions
-  await seedDimensions('disgusted', 'prompting_event', [
-    'Seeing or smelling something deeply unpleasant.',
-    'Observing behaviour that violates your values.',
-    'Betrayal, cruelty, or witnessing someone being stripped of dignity.',
-    'Being forced to engage in something that deeply conflicts with your values.',
-  ])
-  await seedDimensions('disgusted', 'biological_change', [
-    'Feelings of nausea.',
-    'Urge to vomit, gag, or choke.',
-    'Feeling contaminated or dirty.',
-    'Urge to run away or push away.',
-  ])
-  await seedDimensions('disgusted', 'opposite_action', [
-    'Move close. Embrace.',
-    'Be kind; step into the other person\'s shoes.',
-    'Take in what feels repulsive rather than turning away.',
-    'See the situation from the other person\'s point of view.',
-  ], 'adult', 'dbt-handout-11')
-
-  // SHAME dimensions
+  // ── SHAME ─────────────────────────────────────────────────────────────────
   await seedDimensions('shame', 'prompting_event', [
     'Being rejected by people you care about.',
-    'Others finding out that you have done something wrong.',
-    'Doing something people you admire believe is wrong or immoral.',
+    'Having others find out that you have done something wrong.',
+    'Doing (or feeling or thinking) something that people you admire believe is wrong or immoral.',
+    'Comparing some aspect of yourself or your behaviour to a standard and feeling you do not live up to it.',
+    'Being betrayed by a person you love.',
     'Being laughed at or made fun of.',
-    'Being criticised publicly.',
-    'Exposure of a very private aspect of yourself.',
-    'Failing at something you feel you should be competent to do.',
+    'Being criticised in public or in front of someone else.',
+    'Others attacking your integrity.',
+    'Being reminded of something wrong, immoral, or shameful you did in the past.',
+    'Being rejected or criticised for something you expected praise for.',
+    'Having emotions or experiences that have been invalidated.',
+    'Exposure of a very private aspect of yourself or your life.',
+    'Exposure of a physical characteristic you dislike.',
+    'Failing at something you feel you are (or should be) competent to do.',
   ])
   await seedDimensions('shame', 'interpretation', [
-    'Believing that others will reject you.',
-    'Judging yourself to be inferior or not good enough.',
+    'Believing that others will reject you (or have rejected you).',
+    'Judging yourself to be inferior, not "good enough," not as good as others.',
+    'Comparing yourself to others and thinking that you are a "loser".',
     'Believing yourself unlovable.',
     'Thinking that you are bad, immoral, or wrong.',
     'Thinking that you are defective.',
-    'Thinking your behaviour, thoughts, or feelings are silly or stupid.',
+    'Thinking that you are a bad person or a failure.',
+    'Believing your body (or a body part) is too big, too small, or ugly.',
+    'Thinking that you have not lived up to others\' expectations of you.',
+    'Thinking that your behaviour, thoughts, or feelings are silly or stupid.',
   ])
   await seedDimensions('shame', 'biological_change', [
     'Pain in the pit of the stomach.',
     'Sense of dread.',
-    'Wanting to shrink down and disappear.',
+    'Wanting to shrink down and/or disappear.',
     'Wanting to hide or cover your face and body.',
   ])
+  await seedDimensions('shame', 'expression_action', [
+    'Hiding behaviour or a characteristic from other people.',
+    'Avoiding the person you have harmed.',
+    'Avoiding persons who have criticised you.',
+    'Avoiding yourself — distracting, ignoring.',
+    'Withdrawing; covering the face.',
+    'Bowing your head, grovelling.',
+    'Appeasing; saying you are sorry over and over.',
+    'Looking down and away from others.',
+    'Sinking back; slumped and rigid posture.',
+    'Halting speech; lowered volume while talking.',
+  ])
   await seedDimensions('shame', 'aftereffect', [
-    'Shutting down; blocking all emotions.',
-    'Engaging in distracting, impulsive behaviours.',
-    'High amount of self-focus and preoccupation.',
-    'Depersonalisation or numbness.',
+    'Avoiding thinking about your transgression; shutting down; blocking all emotions.',
+    'Engaging in distracting, impulsive behaviours to divert your mind or attention.',
+    'High amount of self-focus; preoccupation with yourself.',
+    'Depersonalisation, dissociative experiences, numbness, or shock.',
     'Attacking or blaming others.',
-    'Isolation and feeling alienated.',
+    'Conflicts with other people.',
+    'Isolation, feeling alienated.',
+    'Impairment in problem-solving ability.',
   ])
   await seedDimensions('shame', 'opposite_action', [
     'Make public your personal characteristics or behaviour — with people who won\'t reject you.',
     'Repeat the behaviour without hiding from safe people.',
     'If your moral code was violated: apologise, repair, forgive yourself, and let it go.',
-  ], 'adult', 'dbt-handout-11')
+  ], 'adult', 'emotion-regulation-handout-11')
 
-  // GUILT dimensions
+  // ── GUILT ─────────────────────────────────────────────────────────────────
   await seedDimensions('guilt', 'prompting_event', [
     'Doing or thinking something you believe is wrong.',
     'Doing or thinking something that violates your personal values.',
     'Not doing something you said you would do.',
-    'Causing harm or damage to another person.',
+    'Committing a transgression against another person or something you value.',
+    'Causing harm or damage to another person or object.',
+    'Causing harm or damage to yourself.',
     'Being reminded of something wrong you did in the past.',
+  ])
+  await seedDimensions('guilt', 'interpretation', [
+    'Thinking that your actions are to blame for something.',
+    'Thinking that you behaved badly.',
+    'Thinking, "If only I had done something differently..."',
   ])
   await seedDimensions('guilt', 'biological_change', [
     'Hot, red face.',
     'Jitteriness or nervousness.',
-    'Feeling suffocated.',
+    'Suffocating.',
   ])
   await seedDimensions('guilt', 'expression_action', [
-    'Trying to repair the harm, make amends, or fix the damage.',
+    'Trying to repair the harm, make amends for the wrongdoing, fix the damage, or change the outcome.',
     'Asking for forgiveness, apologising, confessing.',
-    'Giving gifts or making sacrifices to make up for the transgression.',
+    'Giving gifts or making sacrifices to try to make up for the transgression.',
+    'Bowing your head; kneeling before the person.',
   ])
   await seedDimensions('guilt', 'aftereffect', [
     'Making resolutions to change.',
@@ -668,34 +1001,10 @@ async function main() {
     'If justified: seek forgiveness. Repair the harm.',
     'Accept the consequences gracefully.',
     'Commit to avoiding the behaviour that violates your moral values in future.',
-  ], 'adult', 'dbt-handout-11')
+  ], 'adult', 'emotion-regulation-handout-11')
 
-  // HAPPINESS dimensions
-  await seedDimensions('happy', 'prompting_event', [
-    'Receiving a wonderful surprise.',
-    'Reality exceeding your expectations.',
-    'Getting what you want or have worked hard for.',
-    'Being successful at a task.',
-    'Receiving esteem, respect, or praise.',
-    'Receiving love, liking, or affection.',
-    'Being accepted and belonging somewhere.',
-  ])
-  await seedDimensions('happy', 'biological_change', [
-    'Feeling excited and physically energetic.',
-    'Feeling like giggling or laughing.',
-    'Feeling calm all the way through.',
-    'Feeling open or expansive.',
-    'Feeling at peace.',
-  ])
-  await seedDimensions('happy', 'aftereffect', [
-    'Being courteous or friendly to others.',
-    'Having a positive outlook.',
-    'Having a high threshold for worry or annoyance.',
-    'Expecting to feel joyful in the future.',
-  ])
-
-  // What emotions do for you (Handout 3) — shown in definition panel
-  for (const key of ['happy', 'sad', 'angry', 'disgusted', 'fearful', 'shame', 'guilt', 'love', 'bad', 'surprised']) {
+  // What emotions do for you — shown in definition panel
+  for (const key of ['happy', 'sad', 'angry', 'disgusted', 'fearful', 'shame', 'guilt', 'love', 'bad', 'surprised', 'envy', 'jealousy']) {
     await seedDimensions(key, 'what_it_does', [
       'Emotions motivate us for action — they prepare us and help us overcome obstacles.',
       'Emotions communicate to others — our face and body language signal how we feel faster than words.',
@@ -703,7 +1012,7 @@ async function main() {
     ], 'child', 'dbt-handout-3')
   }
 
-  console.log('  ✓ DBT dimensions seeded')
+  console.log('  ✓ Emotion regulation dimensions seeded')
 
   // ── Coping suggestions ────────────────────────────────────────────────────
 

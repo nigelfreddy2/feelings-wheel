@@ -130,7 +130,7 @@ export default function DefinitionPanel({ emotion, level, onSelect, onClose }: P
         {tab === 'todo' && oppositeActions.length > 0 && (
           <>
             <p style={{ margin: '0 0 8px', color: '#57606a', fontSize: 12, fontWeight: 600 }}>
-              Opposite action (DBT)…
+              Try the opposite action…
             </p>
             <ul style={{ margin: 0, paddingLeft: 18 }}>
               {oppositeActions.map((a, i) => (

@@ -53,8 +53,17 @@ export async function recordEmotionSelection(
   emotionKey: string,
   dwellMs?: number,
   intensity?: number
+): Promise<{ id: string }> {
+  return post(`/sessions/${sessionId}/emotions`, { ring, emotionKey, dwellMs, intensity })
+}
+
+export async function saveEmotionDetails(
+  sessionId: string,
+  sessionEmotionId: string,
+  dimensionItemIds: string[]
 ): Promise<void> {
-  await post(`/sessions/${sessionId}/emotions`, { ring, emotionKey, dwellMs, intensity })
+  if (dimensionItemIds.length === 0) return
+  await post(`/sessions/${sessionId}/emotions/${sessionEmotionId}/details`, { dimensionItemIds })
 }
 
 export async function logEvent(
